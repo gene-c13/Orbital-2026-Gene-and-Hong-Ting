@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -143,9 +144,16 @@ class _LoginScreenState extends State<LoginScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        onPressed: () {
-                          print('Email: ${emailController.text}');
-                          print('Password: ${passwordController.text}');
+                        onPressed: () async {
+                          try {
+                            await FirebaseAuth.instance.signInWithEmailAndPassword(
+                              email: emailController.text.trim(),
+                              password: passwordController.text.trim(),
+                            );
+                            print('Logged in!');
+                          } on FirebaseAuthException catch (e) {
+                            print('Login failed: ${e.message}');
+                          }
                         },
                         child: const Text(
                           'Sign In',

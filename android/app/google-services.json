@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "258120052562",
+    "project_id": "after-hours-87c70",
+    "storage_bucket": "after-hours-87c70.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:258120052562:android:5c28ce1e0be6f449e2948b",
+        "android_client_info": {
+          "package_name": "com.example.after_hours"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDyxNQF7hruA9toXrgxbGM6TvCXvb10IJQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
