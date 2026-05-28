@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'events_screen.dart';
-import 'register_screen.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _RegisterScreenState extends State<RegisterScreen> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
@@ -44,7 +43,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const Text(
                 'AFTER HOURS',
                 style: TextStyle(
-                  fontSize: 36,
+                  fontSize: 32,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                   letterSpacing: 3,
@@ -55,7 +54,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 8),
               const Text(
-                "SINGAPORE'S NIGHTLIFE COMPANION",
+                "JOIN THE NIGHT",
                 style: TextStyle(
                   fontSize: 13,
                   color: Color(0xCCB14EFF),
@@ -88,8 +87,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     TextField(
                       controller: emailController,
                       keyboardType: TextInputType.emailAddress,
-                      cursorColor: Colors.white,
                       style: const TextStyle(color: Colors.white),
+                      cursorColor: Colors.white,
                       decoration: InputDecoration(
                         hintText: 'your@email.com',
                         hintStyle: const TextStyle(color: Color(0x80FFFFFF)),
@@ -103,15 +102,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 16),
                     const Text(
-                      'Password',
+                      'Password (6+ characters)',
                       style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
                     TextField(
                       controller: passwordController,
                       obscureText: true,
-                      cursorColor: Colors.white,
                       style: const TextStyle(color: Colors.white),
+                      cursorColor: Colors.white,
                       decoration: InputDecoration(
                         hintText: '••••••••',
                         hintStyle: const TextStyle(color: Color(0x80FFFFFF)),
@@ -150,21 +149,31 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         onPressed: () async {
                           try {
-                            await FirebaseAuth.instance.signInWithEmailAndPassword(
+                            await FirebaseAuth.instance.createUserWithEmailAndPassword(
                               email: emailController.text.trim(),
                               password: passwordController.text.trim(),
                             );
-                            print('Logged in!');
                             if (!context.mounted) return;
                             Navigator.of(context).pushReplacement(
                               MaterialPageRoute(builder: (context) => const EventsScreen()),
                             );
                           } on FirebaseAuthException catch (e) {
-                            print('Login failed: ${e.message}');
+                            String message = 'Something went wrong.';
+                            if (e.code == 'email-already-in-use') {
+                              message = 'That email already has an account.';
+                            } else if (e.code == 'weak-password') {
+                              message = 'Password must be at least 6 characters.';
+                            } else if (e.code == 'invalid-email') {
+                              message = "That email doesn't look right.";
+                            }
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(message)),
+                            );
                           }
                         },
                         child: const Text(
-                          'Sign In',
+                          'Create Account',
                           style: TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -178,12 +187,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     Center(
                       child: TextButton(
                         onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(builder: (context) => const RegisterScreen()),
-                          );
+                          Navigator.of(context).pop();
                         },
                         child: const Text(
-                          "Don't have an account? Sign up",
+                          "Already have an account? Sign in",
                           style: TextStyle(color: Color(0xCCB14EFF)),
                         ),
                       ),
