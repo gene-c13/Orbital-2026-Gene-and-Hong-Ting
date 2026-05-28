@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'events_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -151,6 +152,10 @@ class _LoginScreenState extends State<LoginScreen> {
                               password: passwordController.text.trim(),
                             );
                             print('Logged in!');
+                            if (!context.mounted) return;
+                            Navigator.of(context).pushReplacement(
+                              MaterialPageRoute(builder: (context) => const EventsScreen()),
+                            );
                           } on FirebaseAuthException catch (e) {
                             print('Login failed: ${e.message}');
                           }
