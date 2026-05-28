@@ -41,7 +41,6 @@ class EventService {
   Stream<List<Event>> getEventsByDateStream(String date) {
     return _eventsCollection
         .where('date', isEqualTo: date)
-        .orderBy('time')
         .snapshots()
         .map((QuerySnapshot snapshot) {
           return snapshot.docs

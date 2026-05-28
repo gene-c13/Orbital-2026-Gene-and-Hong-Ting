@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'event.dart';
+import 'event_service.dart';
 
 class EventsScreen extends StatefulWidget {
   const EventsScreen({super.key});
@@ -11,39 +12,11 @@ class EventsScreen extends StatefulWidget {
 
 class _EventsScreenState extends State<EventsScreen> {
   DateTime selectedDate = DateTime.now();
+  final EventService _eventService = EventService();
 
-  // Dummy events for now — Hong Ting will replace this with real data from Firestore.
-  final List<Event> events = const [
-    Event(
-      name: 'Capital',
-      venue: 'Zouk Singapore',
-      dj: 'DJ Koflow',
-      time: '10:00 PM',
-      price: '\$25 - \$35',
-      crowdLevel: 'High',
-      genres: ['House', 'Techno'],
-      hasGuestlist: true,
-    ),
-    Event(
-      name: 'Skyline Sessions',
-      venue: 'CÉ LA VI',
-      dj: 'DJ Rattle',
-      time: '9:00 PM',
-      price: '\$30 - \$40',
-      crowdLevel: 'Medium',
-      genres: ['Deep House', 'Nu-Disco'],
-      hasGuestlist: true,
-    ),
-    Event(
-      name: 'Cloud Nine Fridays',
-      venue: '1-Altitude',
-      dj: 'DJ Ramsey & Fen',
-      time: '8:00 PM',
-      price: '\$20 - \$30',
-      crowdLevel: 'High',
-      genres: ['EDM', 'Progressive House'],
-    ),
-  ];
+  String _formatDateForQuery(DateTime date) {
+    return DateFormat('yyyy-MM-dd').format(date);
+  }
 
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
@@ -67,6 +40,8 @@ class _EventsScreenState extends State<EventsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final String dateString = _formatDateForQuery(selectedDate);
+
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -88,11 +63,15 @@ class _EventsScreenState extends State<EventsScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text('After Hours',
-                        style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold)),
                     TextButton.icon(
                       onPressed: () {},
                       icon: const Icon(Icons.logout, color: Colors.white),
-                      label: const Text('Logout', style: TextStyle(color: Colors.white)),
+                      label: const Text('Logout',
+                          style: TextStyle(color: Colors.white)),
                     ),
                   ],
                 ),
@@ -105,7 +84,8 @@ class _EventsScreenState extends State<EventsScreen> {
                     const SizedBox(width: 8),
                     _tabButton(context, Icons.people, 'Social', false),
                     const SizedBox(width: 8),
-                    _tabButton(context, Icons.shopping_bag, 'Marketplace', false),
+                    _tabButton(
+                        context, Icons.shopping_bag, 'Marketplace', false),
                   ],
                 ),
               ),
@@ -120,58 +100,75 @@ class _EventsScreenState extends State<EventsScreen> {
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(color: const Color(0x33FFFFFF)),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  child: StreamBuilder<List<Event>>(
+                    stream: _eventService.getEventsByDateStream(dateString),                    builder: (context, snapshot) {
+                      final eventCount = snapshot.data?.length ?? 0;
+
+                      return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Column(
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(DateFormat('EEEE').format(selectedDate),
-                                  style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
-                              const SizedBox(height: 4),
-                              Text(DateFormat('d MMMM y').format(selectedDate),
-                                  style: const TextStyle(color: Color(0xCCFFFFFF), fontSize: 16)),
-                              const SizedBox(height: 8),
-                              Text('${events.length} events tonight',
-                                  style: const TextStyle(color: Color(0x99FFFFFF), fontSize: 14)),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    DateFormat('EEEE').format(selectedDate),
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    DateFormat('d MMMM y').format(selectedDate),
+                                    style: const TextStyle(
+                                        color: Color(0xCCFFFFFF), fontSize: 16),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    '$eventCount events tonight',
+                                    style: const TextStyle(
+                                        color: Color(0x99FFFFFF), fontSize: 14),
+                                  ),
+                                ],
+                              ),
+                              Row(
+                                children: [
+                                  IconButton(
+                                    onPressed: () => _changeDay(-1),
+                                    icon: const Icon(Icons.chevron_left,
+                                        color: Colors.white),
+                                  ),
+                                  OutlinedButton.icon(
+                                    onPressed: _pickDate,
+                                    icon: const Icon(Icons.calendar_today,
+                                        color: Colors.white, size: 16),
+                                    label: const Text('Select Date',
+                                        style: TextStyle(color: Colors.white)),
+                                    style: OutlinedButton.styleFrom(
+                                      side: const BorderSide(
+                                          color: Color(0x33FFFFFF)),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    onPressed: () => _changeDay(1),
+                                    icon: const Icon(Icons.chevron_right,
+                                        color: Colors.white),
+                                  ),
+                                ],
+                              ),
                             ],
                           ),
-                          Row(
-                            children: [
-                              IconButton(
-                                onPressed: () => _changeDay(-1),
-                                icon: const Icon(Icons.chevron_left, color: Colors.white),
-                              ),
-                              OutlinedButton.icon(
-                                onPressed: _pickDate,
-                                icon: const Icon(Icons.calendar_today, color: Colors.white, size: 16),
-                                label: const Text('Select Date', style: TextStyle(color: Colors.white)),
-                                style: OutlinedButton.styleFrom(
-                                  side: const BorderSide(color: Color(0x33FFFFFF)),
-                                ),
-                              ),
-                              IconButton(
-                                onPressed: () => _changeDay(1),
-                                icon: const Icon(Icons.chevron_right, color: Colors.white),
-                              ),
-                            ],
+                          const SizedBox(height: 24),
+                          Expanded(
+                            child: _buildEventList(snapshot),
                           ),
                         ],
-                      ),
-                      const SizedBox(height: 24),
-                      Expanded(
-                        child: ListView.builder(
-                          itemCount: events.length,
-                          itemBuilder: (context, index) {
-                            return _eventCard(events[index]);
-                          },
-                        ),
-                      ),
-                    ],
+                      );
+                    },
                   ),
                 ),
               ),
@@ -179,6 +176,41 @@ class _EventsScreenState extends State<EventsScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildEventList(AsyncSnapshot<List<Event>> snapshot) {
+    if (snapshot.connectionState == ConnectionState.waiting) {
+      return const Center(
+        child: CircularProgressIndicator(color: Colors.white),
+      );
+    }
+
+    if (snapshot.hasError) {
+      return const Center(
+        child: Text(
+          'Something went wrong. Please try again.',
+          style: TextStyle(color: Colors.white70),
+        ),
+      );
+    }
+
+    if (!snapshot.hasData || snapshot.data!.isEmpty) {
+      return const Center(
+        child: Text(
+          'No events tonight.\nCheck back later or pick another date.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.white70, fontSize: 16),
+        ),
+      );
+    }
+
+    final events = snapshot.data!;
+    return ListView.builder(
+      itemCount: events.length,
+      itemBuilder: (context, index) {
+        return _eventCard(events[index]);
+      },
     );
   }
 
@@ -199,11 +231,15 @@ class _EventsScreenState extends State<EventsScreen> {
             children: [
               Expanded(
                 child: Text(event.name,
-                    style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold)),
               ),
               if (event.hasGuestlist)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: const Color(0x339D4EDD),
                     borderRadius: BorderRadius.circular(20),
@@ -213,22 +249,26 @@ class _EventsScreenState extends State<EventsScreen> {
                     children: [
                       Icon(Icons.check_circle, color: Colors.white, size: 14),
                       SizedBox(width: 4),
-                      Text('Guestlist', style: TextStyle(color: Colors.white, fontSize: 12)),
+                      Text('Guestlist',
+                          style: TextStyle(color: Colors.white, fontSize: 12)),
                     ],
                   ),
                 ),
             ],
           ),
           const SizedBox(height: 4),
-          Text(event.venue, style: const TextStyle(color: Color(0xCCFFFFFF))),
+          Text(event.venue,
+              style: const TextStyle(color: Color(0xCCFFFFFF))),
           const SizedBox(height: 12),
           Row(
             children: [
-              const Icon(Icons.music_note, color: Color(0xFFB14EFF), size: 16),
+              const Icon(Icons.music_note,
+                  color: Color(0xFFB14EFF), size: 16),
               const SizedBox(width: 4),
               Text(event.dj, style: const TextStyle(color: Colors.white)),
               const Spacer(),
-              const Icon(Icons.access_time, color: Color(0xFFB14EFF), size: 16),
+              const Icon(Icons.access_time,
+                  color: Color(0xFFB14EFF), size: 16),
               const SizedBox(width: 4),
               Text(event.time, style: const TextStyle(color: Colors.white)),
             ],
@@ -236,7 +276,8 @@ class _EventsScreenState extends State<EventsScreen> {
           const SizedBox(height: 8),
           Row(
             children: [
-              const Icon(Icons.attach_money, color: Color(0xFFB14EFF), size: 16),
+              const Icon(Icons.attach_money,
+                  color: Color(0xFFB14EFF), size: 16),
               Text(event.price, style: const TextStyle(color: Colors.white)),
               const Spacer(),
               _crowdBadge(event.crowdLevel),
@@ -265,7 +306,9 @@ class _EventsScreenState extends State<EventsScreen> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: color),
       ),
-      child: Text(level, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold)),
+      child: Text(level,
+          style: TextStyle(
+              color: color, fontSize: 12, fontWeight: FontWeight.bold)),
     );
   }
 
@@ -277,11 +320,13 @@ class _EventsScreenState extends State<EventsScreen> {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0x33FFFFFF)),
       ),
-      child: Text(genre, style: const TextStyle(color: Colors.white, fontSize: 12)),
+      child: Text(genre,
+          style: const TextStyle(color: Colors.white, fontSize: 12)),
     );
   }
 
-  Widget _tabButton(BuildContext context, IconData icon, String label, bool active) {
+  Widget _tabButton(
+      BuildContext context, IconData icon, String label, bool active) {
     return GestureDetector(
       onTap: () {
         if (!active) {
