@@ -14,6 +14,23 @@ class _LoginScreenState extends State<LoginScreen> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
+  Future<void> _signIn() async {
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+      );
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const EventsScreen()),
+      );
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message ?? 'Login failed.')),
+      );
+    }
+  }
   @override
   void dispose() {
     emailController.dispose();
@@ -67,18 +84,27 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ],
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Email',
+                child: Theme(
+                  data: Theme.of(context).copyWith(
+                    textSelectionTheme: const TextSelectionThemeData(
+                      selectionColor: Color(0x55B14EFF),
+                      selectionHandleColor: Color(0xFFB14EFF),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Email',
                       style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
                     TextField(
                       controller: emailController,
                       keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
                       cursorColor: Colors.white,
+                      selectionControls: materialTextSelectionControls,
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
                         hintText: 'your@email.com',
@@ -100,7 +126,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     TextField(
                       controller: passwordController,
                       obscureText: true,
+                      textInputAction: TextInputAction.done,
                       cursorColor: Colors.white,
+                      selectionControls: materialTextSelectionControls,
+                      onSubmitted: (_) => _signIn(),
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
                         hintText: '••••••••',
@@ -138,21 +167,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        onPressed: () async {
-                          try {
-                            await FirebaseAuth.instance.signInWithEmailAndPassword(
-                              email: emailController.text.trim(),
-                              password: passwordController.text.trim(),
-                            );
-                            print('Logged in!');
-                            if (!context.mounted) return;
-                            Navigator.of(context).pushReplacement(
-                              MaterialPageRoute(builder: (context) => const EventsScreen()),
-                            );
-                          } on FirebaseAuthException catch (e) {
-                            print('Login failed: ${e.message}');
-                          }
-                        },
+                        onPressed: _signIn,
                         child: const Text(
                           'Sign In',
                           style: TextStyle(
@@ -180,6 +195,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ],
                 ),
+              ),
               ),
             ],
           ),
