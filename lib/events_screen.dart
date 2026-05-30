@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'event.dart';
+import 'event_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'login_screen.dart';
 
@@ -19,39 +20,10 @@ class EventsScreen extends StatefulWidget {
 
 class _EventsScreenState extends State<EventsScreen> {
   DateTime selectedDate = DateTime.now();
+  int _selectedTab = 0;
 
   // Dummy events for now — Hong Ting will replace this with real data from Firestore.
-  final List<Event> events = const [
-    Event(
-      name: 'Capital',
-      venue: 'Zouk Singapore',
-      dj: 'DJ Koflow',
-      time: '10:00 PM',
-      price: '\$25 - \$35',
-      crowdLevel: 'High',
-      genres: ['House', 'Techno'],
-      hasGuestlist: true,
-    ),
-    Event(
-      name: 'Skyline Sessions',
-      venue: 'CÉ LA VI',
-      dj: 'DJ Rattle',
-      time: '9:00 PM',
-      price: '\$30 - \$40',
-      crowdLevel: 'Medium',
-      genres: ['Deep House', 'Nu-Disco'],
-      hasGuestlist: true,
-    ),
-    Event(
-      name: 'Cloud Nine Fridays',
-      venue: '1-Altitude',
-      dj: 'DJ Ramsey & Fen',
-      time: '8:00 PM',
-      price: '\$20 - \$30',
-      crowdLevel: 'High',
-      genres: ['EDM', 'Progressive House'],
-    ),
-  ];
+  final EventService _eventService = EventService();
 
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
@@ -73,7 +45,29 @@ class _EventsScreenState extends State<EventsScreen> {
   Widget build(BuildContext context) {
 
     return Scaffold(
-      body: Container(
+    bottomNavigationBar: BottomNavigationBar(
+      currentIndex: _selectedTab,
+      onTap: (index) {
+        if (index != 0) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('${['Events','Social','Marketplace','Profile'][index]} — coming soon!')),
+          );
+          return;
+        }
+        setState(() => _selectedTab = index);
+      },
+      backgroundColor: const Color(0xFF1A0A3B),
+      selectedItemColor: kAccent,
+      unselectedItemColor: kMuted,
+      type: BottomNavigationBarType.fixed,
+      items: const [
+        BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: 'Events'),
+        BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Social'),
+        BottomNavigationBarItem(icon: Icon(Icons.shopping_bag), label: 'Marketplace'),
+        BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+      ],
+    ),
+    body: Container(
         width: double.infinity,
         height: double.infinity,
         decoration: const BoxDecoration(
@@ -108,19 +102,7 @@ class _EventsScreenState extends State<EventsScreen> {
                   ],
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  children: [
-                    _tabButton(context, Icons.calendar_today, 'Events', true),
-                    const SizedBox(width: 8),
-                    _tabButton(context, Icons.people, 'Social', false),
-                    const SizedBox(width: 8),
-                    _tabButton(context, Icons.shopping_bag, 'Marketplace', false),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
+
               Expanded(
                 child: Container(
                   width: double.infinity,
@@ -147,8 +129,16 @@ class _EventsScreenState extends State<EventsScreen> {
                               Text(DateFormat('d MMMM y').format(selectedDate),
                                   style: const TextStyle(color: Color(0xCCFFFFFF), fontSize: 16)),
                               const SizedBox(height: 8),
-                              Text('${events.length} events tonight',
-                                  style: const TextStyle(color: Color(0x99FFFFFF), fontSize: 14)),
+                              StreamBuilder<List<Event>>(
+                                stream: _eventService.getEventsByDateStream(
+                                  DateFormat('yyyy-MM-dd').format(selectedDate),
+                                ),
+                                builder: (context, snapshot) {
+                                  final count = snapshot.data?.length ?? 0;
+                                  return Text('$count events tonight',
+                                      style: const TextStyle(color: Color(0x99FFFFFF), fontSize: 14));
+                                },
+                              ),
                             ],
                           ),
                           Row(
@@ -175,11 +165,11 @@ class _EventsScreenState extends State<EventsScreen> {
                       ),
                       const SizedBox(height: 24),
                       Expanded(
-                        child: ListView.builder(
-                          itemCount: events.length,
-                          itemBuilder: (context, index) {
-                            return _eventCard(events[index]);
-                          },
+                        child: StreamBuilder<List<Event>>(
+                          stream: _eventService.getEventsByDateStream(
+                            DateFormat('yyyy-MM-dd').format(selectedDate),
+                          ),
+                          builder: (context, snapshot) => _buildEventList(snapshot),
                         ),
                       ),
                     ],
@@ -324,38 +314,6 @@ class _EventsScreenState extends State<EventsScreen> {
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(genre, style: const TextStyle(color: Colors.white, fontSize: 12)),
-    );
-  }
-
-  Widget _tabButton(
-      BuildContext context, IconData icon, String label, bool active) {
-    return GestureDetector(
-      onTap: () {
-        if (!active) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('$label — coming soon!')),
-          );
-        }
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: active ? kAccent : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-          border: active ? null : Border.all(color: kBorder),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: active ? Colors.white : kMuted, size: 16),
-            const SizedBox(width: 6),
-            Text(label,
-                style: TextStyle(
-                    color: active ? Colors.white : kMuted,
-                    fontSize: 13,
-                    fontWeight: active ? FontWeight.bold : FontWeight.normal)),
-          ],
-        ),
-      ),
     );
   }
 }

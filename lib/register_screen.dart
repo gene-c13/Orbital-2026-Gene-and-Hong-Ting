@@ -38,23 +38,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.nightlife, color: Color(0xFFFF2D95), size: 56),
-              const SizedBox(height: 16),
-              const Text(
-                'AFTER HOURS',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  letterSpacing: 3,
-                  shadows: [
-                    Shadow(color: Color(0xFFFF2D95), blurRadius: 24),
-                  ],
-                ),
+              Image.asset(
+                'assets/images/after_hours_logo.png',
+                height: 260,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 2),
               const Text(
-                "JOIN THE NIGHT",
+                'LESS PLANNING. MORE PARTYING.',
                 style: TextStyle(
                   fontSize: 13,
                   color: Color(0xCCB14EFF),
