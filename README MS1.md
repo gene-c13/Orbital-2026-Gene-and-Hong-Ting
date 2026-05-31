@@ -39,7 +39,9 @@ There are 3 main features with sub features. There are a total of 8 features of 
 
 1. **Nightlife Calendar**
 
-   **![][image1]**
+<div align="center">
+  <img width="499" height="830" alt="Screenshot 2026-05-31 at 5 48 50 PM" src="https://github.com/user-attachments/assets/e0646356-efb4-4035-8c9d-31bab85e324b" />
+</div>
 
    	*Figure 1.1: Venues with relevant information for decision-making*
 
@@ -49,7 +51,9 @@ There are 3 main features with sub features. There are a total of 8 features of 
 
    Filter by date, crowd level, price, guestlist status and music genres. This feature is currently scoped for Milestone 2 and has not yet been implemented fully.
 
-   ![][image2]
+<div align="center">
+  <img width="332" height="553" alt="Screenshot 2026-05-31 at 6 16 54 PM" src="https://github.com/user-attachments/assets/48e2941d-3f81-41d4-a3b4-4b9111778402" />
+</div>
 
    			*Figure 1.2: Filtering venues by date allows for efficiency*
 
@@ -99,11 +103,11 @@ There are 3 main features with sub features. There are a total of 8 features of 
 
   **4\. Data Pipeline: Python with BeautifulSoup (Planned — Milestone 2\)** Event data is manually seeded into Firestore at Milestone 1\. From Milestone 2, a Python script using the BeautifulSoup library will scrape event listings directly from Singapore venue websites, parse the relevant fields, and write structured data to the Firestore `events` collection. The script will be run manually on a weekly basis at Milestone 2, with full scheduling automation planned for Milestone 3\.
 
-# **Architecture Diagram**
 
 # **App User Flow Diagram**
 
-![][image3]
+<img width="961" height="381" alt="userflowms1 drawio" src="https://github.com/user-attachments/assets/3f178425-3942-47cf-b211-341861ece43d" />
+
 
 # **Development Plan**
 
