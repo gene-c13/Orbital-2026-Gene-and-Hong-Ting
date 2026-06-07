@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'event.dart';
 import 'event_service.dart';
+import 'event_detail_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'login_screen.dart';
 
@@ -213,7 +214,13 @@ class _EventsScreenState extends State<EventsScreen> {
     return ListView.builder(
       itemCount: events.length,
       itemBuilder: (context, index) {
-        return _eventCard(events[index]);
+        final event = events[index];
+        return GestureDetector(
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => EventDetailScreen(event: event)),
+          ),
+          child: _eventCard(event),
+        );
       },
     );
   }

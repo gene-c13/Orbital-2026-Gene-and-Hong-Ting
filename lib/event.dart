@@ -2,13 +2,16 @@ class Event {
   final String name;
   final String venue;
   final String dj;
+  final String artistBio;
   final String time;
   final String price;
   final String crowdLevel; // 'High', 'Medium', or 'Low'
   final List<String> genres;
   final bool hasGuestlist;
-  final String id;    // Firestore document ID
-  final String date;  // date in YYYY-MM-DD format for filtering
+  final String id;         // Firestore document ID
+  final String date;       // date in YYYY-MM-DD format for filtering
+  final String ticketUrl;  // link to buy tickets (empty = no link)
+  final String description; //event description
 
   const Event({
     required this.name,
@@ -19,8 +22,11 @@ class Event {
     required this.crowdLevel,
     required this.genres,
     this.hasGuestlist = false,
-    this.id = '',     // default empty string so Gene's existing code still works
-    this.date = '',   // default empty string so Gene's existing code still works
+    this.id = '',
+    this.date = '',
+    this.ticketUrl = '',
+    this.artistBio = '',
+    this.description = '',
   });
 
   // fromFirestore() converts raw Firestore data into a clean Event object
@@ -40,6 +46,9 @@ class Event {
       // Firestore arrays come back as List<dynamic> — cast each item to String
       genres: List<String>.from(data['genres'] ?? []),
       date: data['date'] ?? '',
+      ticketUrl: data['ticket_url'] ?? '',
+      artistBio: data['artist_bio'] ?? '',     // ← new
+      description: data['description'] ?? '',
     );
   }
 }
