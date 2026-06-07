@@ -1,0 +1,160 @@
+import re
+import time
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+from bs4 import BeautifulSoup
+
+
+def get_driver():
+    options = webdriver.ChromeOptions()
+    options.add_argument("--headless")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    driver = webdriver.Chrome(
+        service=Service(ChromeDriverManager().install()),
+        options=options
+    )
+    return driver
+
+
+def get_event_links(driver):
+    driver.get("https://zoukgroup.com/singapore/events/")
+    time.sleep(5)
+
+    soup = BeautifulSoup(driver.page_source, "html.parser")
+
+    all_links = soup.find_all("a")
+    print(f"Total <a> tags found: {len(all_links)}")
+    for link in all_links[:15]:
+        print(link.get("href"))
+
+    event_links = soup.find_all("a", href=re.compile(r"/event/"))
+    print(f"\nEvent links found: {len(event_links)}")
+    for link in event_links[:5]:
+        print("href:", link.get("href"))
+        print("text:", link.get_text(separator=" ", strip=True))
+        print("---")
+
+    events = []
+    seen = set()
+
+    for link in event_links:
+        href = link.get("href")
+        text = link.get_text(separator=" ", strip=True)
+
+        if not text or len(text) < 3:
+            continue
+        if href.startswith("/"):
+            href = "https://zoukgroup.com" + href
+        if href in seen:
+            continue
+
+        seen.add(href)
+
+        venue_slug = href.split("/")[4]
+        venue_map = {
+            "capital": "Capital",
+            "zouk": "Zouk Mainroom",
+            "phuture": "Phuture",
+        }
+        venue = venue_map.get(venue_slug, venue_slug.title())
+
+        events.append({
+            "url": href,
+            "venue": venue,
+        })
+
+    return events
+
+
+def scrape_event_detail(driver, event_url):
+    driver.get(event_url)
+    time.sleep(3)
+
+    soup = BeautifulSoup(driver.page_source, "html.parser")
+
+    title_tag = soup.find("title")
+    name = title_tag.text.split(" | ")[0].strip() if title_tag else "Unknown"
+
+    date_match = re.search(r"EVE(\d+)", event_url)
+    if date_match:
+        raw_date = date_match.group(1)[-8:]
+        date = f"{raw_date[:4]}-{raw_date[4:6]}-{raw_date[6:]}"
+    else:
+        date = ""
+
+    desc_tag = soup.find("meta", {"name": "description"})
+    description = desc_tag.get("content", "").strip() if desc_tag else ""
+
+    img_tag = soup.find("meta", {"name": "twitter:image"})
+    image_url = img_tag.get("content", "") if img_tag else ""
+
+    return {
+        "name": name,
+        "date": date,
+        "description": description,
+        "image_url": image_url,
+    }
+
+
+def scrape_all_events():
+    print("Starting browser...")
+    driver = get_driver()
+
+    try:
+        print("Fetching event list...")
+        events = get_event_links(driver)
+        print(f"\nFinal event count: {len(events)}")
+
+        results = []
+
+        for i, event in enumerate(events):
+            print(f"Scraping {i+1}/{len(events)}: {event['url']}")
+            detail = scrape_event_detail(driver, event["url"])
+
+            full_event = {
+                "name": detail["name"],
+                "venue": event["venue"],
+                "date": detail["date"],
+                "description": detail["description"],
+                "image_url": detail["image_url"],
+                "booking_url": event["url"],
+                "dj": "",
+                "time": "10:00 PM",
+                "price": "",
+                "crowd_level": "Medium",
+                "genres": [],
+                "has_guestlist": False,
+                "sort_order": i,
+            }
+
+            results.append(full_event)
+
+    finally:
+        driver.quit()
+
+    return results
+
+
+if __name__ == "__main__":
+    events = scrape_all_events()
+    for e in events:
+        print(e)
+
+import firebase_admin
+from firebase_admin import credentials, firestore
+
+def write_to_firestore(events):
+    cred = credentials.Certificate("scraper/serviceAccountKey.json")
+    firebase_admin.initialize_app(cred)
+    db = firestore.client()
+
+    for event in events:
+        doc_id = event["name"].lower().replace(" ", "-") + "-" + event["date"]
+        db.collection("events").document(doc_id).set(event)
+        print(f"Written: {event['name']} on {event['date']}")
+
+if __name__ == "__main__":
+    events = scrape_all_events()
+    write_to_firestore(events)
