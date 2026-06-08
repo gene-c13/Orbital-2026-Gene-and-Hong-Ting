@@ -47,3 +47,5 @@ app.*.map.json
 serviceAccountKey.json
 
 after_hours.session
+
+scraper/after_hours.session
