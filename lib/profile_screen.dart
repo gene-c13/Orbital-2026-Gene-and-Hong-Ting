@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'login_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 const Color kSurface = Color(0x14FFFFFF);
 const Color kBorder  = Color(0x22FFFFFF);
@@ -17,21 +18,23 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   int _selectedTab = 3;
 
-  // ── Placeholder stats ─────────────────────────────────────────────────
-  // TODO: replace with real Firestore data from users/{uid}
-  // Fields needed in Firestore: hours_this_month (int), events_this_month (int),
-  // puke_count (int), total_events (int), favourite_venue (string),
-  // favourite_genre (string), clubs_visited (array of strings)
-  final int hoursThisMonth   = 14;
-  final int eventsThisMonth  = 5;
-  final int pukeCount        = 2;
-  final int totalEvents      = 38;
-  final String favouriteVenue = 'Fabric';
-  final String favouriteGenre = 'Techno';
-  final List<String> clubsVisited = [
-    'Fabric', 'EGG London', 'XOYO', 'Fold', 'Printworks', 'Junction 2',
-  ];
-  // ──────────────────────────────────────────────────────────────────────
+  Map<String, dynamic> _userData = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    if (doc.exists) {
+      setState(() => _userData = doc.data() ?? {});
+    }
+  }
+  
 
   @override
   Widget build(BuildContext context) {
@@ -123,9 +126,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       _sectionLabel('This month'),
                       const SizedBox(height: 10),
                       _statsRow([
-                        _StatItem(label: 'Hours out', value: '$hoursThisMonth h', icon: Icons.nightlife),
-                        _StatItem(label: 'Events',    value: '$eventsThisMonth',  icon: Icons.calendar_today),
-                        _StatItem(label: 'Puke count', value: '$pukeCount 🤮',    icon: Icons.sick),
+                        _StatItem(label: 'Hours out', value: '${_userData['hours_this_month'] ?? 0} h', icon: Icons.nightlife),
+                        _StatItem(label: 'Events',    value: '${_userData['events_this_month'] ?? 0}',  icon: Icons.calendar_today),
+                        _StatItem(label: 'Puke count', value: '${_userData['puke_count'] ?? 0} 🤮',    icon: Icons.sick),
                       ]),
                       const SizedBox(height: 20),
 
@@ -133,9 +136,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       _sectionLabel('All time'),
                       const SizedBox(height: 10),
                       _statsRow([
-                        _StatItem(label: 'Events attended', value: '$totalEvents',    icon: Icons.confirmation_number),
-                        _StatItem(label: 'Fave venue',      value: favouriteVenue,    icon: Icons.location_on),
-                        _StatItem(label: 'Fave genre',      value: favouriteGenre,    icon: Icons.music_note),
+                       _StatItem(label: 'Events attended', value: '${_userData['total_events'] ?? 0}',        icon: Icons.confirmation_number),
+                       _StatItem(label: 'Fave venue',      value: '${_userData['favourite_venue'] ?? 'TBC'}', icon: Icons.location_on),
+                       _StatItem(label: 'Fave genre',      value: '${_userData['favourite_genre'] ?? 'TBC'}', icon: Icons.music_note),
                       ]),
                       const SizedBox(height: 20),
 
@@ -244,7 +247,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Wrap(
         spacing: 8,
         runSpacing: 8,
-        children: clubsVisited.map((club) {
+        children: (_userData['clubs_visited'] as List<dynamic>? ?? []).map((club) {
           return Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(

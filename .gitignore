@@ -45,3 +45,5 @@ app.*.map.json
 /android/app/release
 
 serviceAccountKey.json
+
+after_hours.session
