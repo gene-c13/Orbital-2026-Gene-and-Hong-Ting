@@ -19,40 +19,25 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _loading = true;
 
-  // Stats — null until loaded from Firestore
-  int hoursThisMonth  = 0;
-  int eventsThisMonth = 0;
-  int pukeCount       = 0;
-  int totalEvents     = 0;
-  String favouriteVenue = '—';
-  String favouriteGenre = '—';
-  List<String> clubsVisited = [];
+  Map<String, dynamic> _userData = {};
 
   @override
   void initState() {
     super.initState();
-    _loadProfile();
+    _loadUserData();
   }
 
-  Future<void> _loadProfile() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
-
-    final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+  Future<void> _loadUserData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
     if (!mounted) return;
-
-    final data = doc.data() ?? {};
     setState(() {
-      hoursThisMonth  = (data['hours_this_month']  ?? 0) as int;
-      eventsThisMonth = (data['events_this_month'] ?? 0) as int;
-      pukeCount       = (data['puke_count']        ?? 0) as int;
-      totalEvents     = (data['total_events']      ?? 0) as int;
-      favouriteVenue  = (data['favourite_venue']   ?? '—') as String;
-      favouriteGenre  = (data['favourite_genre']   ?? '—') as String;
-      clubsVisited    = List<String>.from(data['clubs_visited'] ?? []);
-      _loading        = false;
+      _userData = doc.exists ? (doc.data() ?? {}) : {};
+      _loading = false;
     });
   }
+  
 
   @override
   Widget build(BuildContext context) {
@@ -128,23 +113,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             _avatarCard(displayName),
                             const SizedBox(height: 20),
 
-                            _sectionLabel('This month'),
-                            const SizedBox(height: 10),
-                            _statsRow([
-                              _StatItem(label: 'Hours out',   value: '$hoursThisMonth h',  icon: Icons.nightlife),
-                              _StatItem(label: 'Events',      value: '$eventsThisMonth',   icon: Icons.calendar_today),
-                              _StatItem(label: 'Puke count',  value: '$pukeCount 🤮',      icon: Icons.sick),
-                            ]),
-                            const SizedBox(height: 20),
+                      // This month
+                      _sectionLabel('This month'),
+                      const SizedBox(height: 10),
+                      _statsRow([
+                        _StatItem(label: 'Hours out', value: '${_userData['hours_this_month'] ?? 0} h', icon: Icons.nightlife),
+                        _StatItem(label: 'Events',    value: '${_userData['events_this_month'] ?? 0}',  icon: Icons.calendar_today),
+                        _StatItem(label: 'Puke count', value: '${_userData['puke_count'] ?? 0} 🤮',    icon: Icons.sick),
+                      ]),
+                      const SizedBox(height: 20),
 
-                            _sectionLabel('All time'),
-                            const SizedBox(height: 10),
-                            _statsRow([
-                              _StatItem(label: 'Events attended', value: '$totalEvents',   icon: Icons.confirmation_number),
-                              _StatItem(label: 'Fave venue',      value: favouriteVenue,   icon: Icons.location_on),
-                              _StatItem(label: 'Fave genre',      value: favouriteGenre,   icon: Icons.music_note),
-                            ]),
-                            const SizedBox(height: 20),
+                      // All time
+                      _sectionLabel('All time'),
+                      const SizedBox(height: 10),
+                      _statsRow([
+                       _StatItem(label: 'Events attended', value: '${_userData['total_events'] ?? 0}',        icon: Icons.confirmation_number),
+                       _StatItem(label: 'Fave venue',      value: '${_userData['favourite_venue'] ?? 'TBC'}', icon: Icons.location_on),
+                       _StatItem(label: 'Fave genre',      value: '${_userData['favourite_genre'] ?? 'TBC'}', icon: Icons.music_note),
+                      ]),
+                      const SizedBox(height: 20),
 
                             _sectionLabel('Clubs visited'),
                             const SizedBox(height: 10),
@@ -233,7 +220,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _clubsCard() {
-    if (clubsVisited.isEmpty) {
+    if ((_userData['clubs_visited'] as List<dynamic>? ?? []).isEmpty) {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(20),
@@ -257,7 +244,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Wrap(
         spacing: 8,
         runSpacing: 8,
-        children: clubsVisited.map((club) {
+        children: (_userData['clubs_visited'] as List<dynamic>? ?? []).map((club) {
           return Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(

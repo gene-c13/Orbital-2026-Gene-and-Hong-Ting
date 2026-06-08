@@ -144,21 +144,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               email: emailController.text.trim(),
                               password: passwordController.text.trim(),
                             );
-
-                            // Create the user's profile document in Firestore
-                            await FirebaseFirestore.instance
-                                .collection('users')
-                                .doc(credential.user!.uid)
-                                .set({
-                              'hours_this_month': 0,
-                              'events_this_month': 0,
-                              'puke_count': 0,
-                              'total_events': 0,
-                              'favourite_venue': '',
-                              'favourite_genre': '',
-                              'clubs_visited': [],
-                            });
-
+                            final user = credential.user;
+                            if (user != null) {
+                              await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+                                'hours_this_month': 0,
+                                'events_this_month': 0,
+                                'puke_count': 0,
+                                'total_events': 0,
+                                'favourite_venue': '',
+                                'favourite_genre': '',
+                                'clubs_visited': [],
+                              });
+                            }
                             if (!context.mounted) return;
                             Navigator.of(context).pushReplacement(
                               MaterialPageRoute(builder: (context) => const EventsScreen()),
