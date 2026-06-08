@@ -7,9 +7,9 @@ import anthropic
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-API_ID = 30661011
-API_HASH = '5db6afb05920372ccbce80b8c34904ce'
-ANTHROPIC_API_KEY = 'your-anthropic-api-key-here'
+API_ID = 'teleapi'
+API_HASH = 'teleapihash'
+ANTHROPIC_API_KEY = 'yourapikeyhere'
 
 CHANNELS = [
     '@makecherrygr8again',
@@ -32,7 +32,7 @@ def init_firestore():
 
 
 def extract_event_with_claude(message_text, channel_name):
-    client = anthropic.Anthropic(api_key='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')
+    client = anthropic.Anthropic(api_key='yourapikey')
     prompt = f"""You are extracting nightclub event information from a Telegram message posted in Singapore.
 
 Channel: {channel_name}
@@ -88,6 +88,8 @@ def write_event_to_firestore(db, event, source_channel):
     event['booking_url'] = event.get('guestlist_url', '')
 
     doc_id = event['name'].lower().replace(' ', '-') + '-' + event['date']
+    if isinstance(event.get('dj'), list):
+        event['dj'] = ', '.join(event['dj'])
     db.collection('events').document(doc_id).set(event)
     print(f"Written: {event['name']} on {event['date']} from {source_channel}")
 
