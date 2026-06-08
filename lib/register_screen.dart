@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'events_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -139,10 +140,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                         onPressed: () async {
                           try {
-                            await FirebaseAuth.instance.createUserWithEmailAndPassword(
+                            final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
                               email: emailController.text.trim(),
                               password: passwordController.text.trim(),
                             );
+
+                            // Create the user's profile document in Firestore
+                            await FirebaseFirestore.instance
+                                .collection('users')
+                                .doc(credential.user!.uid)
+                                .set({
+                              'hours_this_month': 0,
+                              'events_this_month': 0,
+                              'puke_count': 0,
+                              'total_events': 0,
+                              'favourite_venue': '',
+                              'favourite_genre': '',
+                              'clubs_visited': [],
+                            });
+
                             if (!context.mounted) return;
                             Navigator.of(context).pushReplacement(
                               MaterialPageRoute(builder: (context) => const EventsScreen()),

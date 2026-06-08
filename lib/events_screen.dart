@@ -5,8 +5,7 @@ import 'event_service.dart';
 import 'event_detail_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'login_screen.dart';
-import 'profile_screen.dart';
-import 'social_screen.dart';
+import 'navigation_helper.dart';
 
 
 const Color kSurface = Color(0x14FFFFFF);  // translucent white card
@@ -51,26 +50,9 @@ class _EventsScreenState extends State<EventsScreen> {
     bottomNavigationBar: BottomNavigationBar(
       currentIndex: _selectedTab,
       onTap: (index) {
-        if (index == 0) {
-          setState(() => _selectedTab = index);
-          return;
-        }
-        if (index == 1) {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const SocialScreen()),
-          );
-          return;
-        }
-        if (index == 3) {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const ProfileScreen()),
-          );
-          return;
-        }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${['Events','Social','Marketplace','Profile'][index]} — coming soon!')),
-        );
-      },
+          if (index == 0) return; // already here
+          goToTab(context, index);
+        },
       backgroundColor: const Color(0xFF1A0A3B),
       selectedItemColor: kAccent,
       unselectedItemColor: kMuted,
