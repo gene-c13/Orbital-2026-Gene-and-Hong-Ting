@@ -7,9 +7,9 @@ import anthropic
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-API_ID = 'teleapi'
-API_HASH = 'teleapihash'
-ANTHROPIC_API_KEY = 'yourapikeyhere'
+API_ID = '30661011'
+API_HASH = '5db6afb05920372ccbce80b8c34904ce'
+ANTHROPIC_API_KEY = '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'
 
 CHANNELS = [
     '@makecherrygr8again',
@@ -32,7 +32,7 @@ def init_firestore():
 
 
 def extract_event_with_claude(message_text, channel_name):
-    client = anthropic.Anthropic(api_key='yourapikey')
+    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     prompt = f"""You are extracting nightclub event information from a Telegram message posted in Singapore.
 
 Channel: {channel_name}
@@ -45,11 +45,10 @@ If it is NOT an event announcement (e.g. post-event thanks, random chat, ticket 
 Fields to extract:
 - name: event name or night theme (string)
 - venue: club or venue name (string)
-- date: in YYYY-MM-DD format. Today is {datetime.now().strftime('%Y-%m-%d')}. Use context clues like "tonight", "this Friday", "03.06" to determine the date. (string)
-- dj: DJ name(s) comma separated (string)
+- date: in YYYY-MM-DD format. Today is {datetime.now().strftime('%Y-%m-%d')}. Dates in messages are in DD.MM or DD.MM.YYYY format (e.g. "10.06" means June 10, not October 6). Use context clues like "tonight", "this Friday", "03.06" to determine the date. (string)- dj: DJ name(s) comma separated (string)
 - genres: list of music genres mentioned (list of strings)
 - time: doors open time e.g. "10:00 PM" (string or null)
-- price: entry price if mentioned e.g. "$25" (string or null)
+- price: entry/ticket price only, ignore bottle or sofa package prices (string or null)"
 - has_guestlist: true if guestlist is mentioned (boolean)
 - guestlist_url: URL to guestlist form if present (string or null)
 
@@ -77,9 +76,31 @@ Return only valid JSON, no explanation. If not an event, return the word null.""
         return None
 
 
+VENUE_KEYWORDS = ['yang', 'riverhouse', 'cherry', 'marquee', 'zouk', 'canvas', 'dashi']
+
+VENUE_MAP = {
+    'riverhouse': 'yang',
+}
+
+def normalise_venue(venue_str):
+    if not venue_str:
+        return 'unknown'
+    v = venue_str.lower()
+    for keyword in VENUE_KEYWORDS:
+        if keyword in v:
+            return VENUE_MAP.get(keyword, keyword)
+    return v
+
+
 def write_event_to_firestore(db, event, source_channel):
     if not event.get('name') or not event.get('date'):
         return
+
+    if isinstance(event.get('dj'), list):
+        event['dj'] = ', '.join(event['dj'])
+
+    if source_channel == '@miggyt_guestlist' :
+        event['venue'] = 'Dashi Gogo'
 
     event['source'] = source_channel
     event['crowd_level'] = 'Medium'
@@ -87,11 +108,22 @@ def write_event_to_firestore(db, event, source_channel):
     event['image_url'] = ''
     event['booking_url'] = event.get('guestlist_url', '')
 
-    doc_id = event['name'].lower().replace(' ', '-') + '-' + event['date']
-    if isinstance(event.get('dj'), list):
-        event['dj'] = ', '.join(event['dj'])
+    venue_raw = event.get('venue', event.get('name', 'unknown'))
+    venue = normalise_venue(venue_raw).replace(' ', '-')
+    doc_id = venue + '-' + event['date']
+
+    existing = db.collection('events').document(doc_id).get()
+    if existing.exists:
+        existing_data = existing.to_dict() #converts firestore doc to python
+        existing_score = sum(1 for v in existing_data.values() if v) #count how many fields in existing doc have non empty values
+        new_score = sum(1 for v in event.values() if v) #same thing but for new event youre about to write
+        if existing_score > new_score:
+            print(f"  Skipped (existing has more info): {event['name']}")
+            return  #if existing doc has equal or more filled fields, skip the write (keep existing doc) and exit fxn
+
     db.collection('events').document(doc_id).set(event)
     print(f"Written: {event['name']} on {event['date']} from {source_channel}")
+   
 
 
 async def scrape_channels():
