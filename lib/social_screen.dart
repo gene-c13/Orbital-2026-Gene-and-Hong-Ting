@@ -1,99 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'create_post_screen.dart';
+import 'navigation_helper.dart';
 
 const Color kSurface = Color(0x14FFFFFF);
 const Color kBorder  = Color(0x22FFFFFF);
 const Color kAccent  = Color(0xFFB14EFF);
 const Color kMuted   = Color(0xCCFFFFFF);
 
-// ── Placeholder data model ─────────────────────────────────────────────
-// TODO: replace with Firestore stream from 'posts' collection,
-// ordered by created_at descending
-class _Post {
-  final String id;
-  final String username;
-  final String initials;
-  final String caption;
-  final String? venueTag;
-  final String? eventTag;
-  final double? rating;
-  int likeCount;
-  final int commentCount;
-  final String timeAgo;
-  bool liked;
-
-  _Post({
-    required this.id,
-    required this.username,
-    required this.initials,
-    required this.caption,
-    this.venueTag,
-    this.eventTag,
-    this.rating,
-    required this.likeCount,
-    required this.commentCount,
-    required this.timeAgo,
-    this.liked = false,
-  });
-}
-
-// ── Screen ─────────────────────────────────────────────────────────────
-
-class SocialScreen extends StatefulWidget {
+class SocialScreen extends StatelessWidget {
   const SocialScreen({super.key});
-
-  @override
-  State<SocialScreen> createState() => _SocialScreenState();
-}
-
-class _SocialScreenState extends State<SocialScreen> {
-  // Placeholder posts — swap for a StreamBuilder<List<Post>> from Firestore
-  final List<_Post> _posts = [
-    _Post(
-      id: '1',
-      username: 'alex_raves',
-      initials: 'A',
-      caption: 'Fabric last night was absolutely mental. The sound system on floor 1 is on another level. Didn\'t leave until 9am 😅',
-      venueTag: 'Fabric',
-      rating: 4.5,
-      likeCount: 24,
-      commentCount: 5,
-      timeAgo: '2h ago',
-    ),
-    _Post(
-      id: '2',
-      username: 'mia_nightlife',
-      initials: 'M',
-      caption: 'First time at Printworks and honestly I\'m obsessed. The industrial vibe is unreal. Already planning the next one.',
-      venueTag: 'Printworks',
-      eventTag: 'Junction 2 Indoor',
-      rating: 5,
-      likeCount: 61,
-      commentCount: 12,
-      timeAgo: '5h ago',
-    ),
-    _Post(
-      id: '3',
-      username: 'dan_techno',
-      initials: 'D',
-      caption: 'Solid night at XOYO. DJ set was fire but got a bit too packed around midnight.',
-      venueTag: 'XOYO',
-      rating: 3.5,
-      likeCount: 9,
-      commentCount: 2,
-      timeAgo: '1d ago',
-    ),
-    _Post(
-      id: '4',
-      username: 'priya_b',
-      initials: 'P',
-      caption: 'EGG London terrace in summer hits different. Perfect warm-up before the main room.',
-      venueTag: 'EGG London',
-      rating: 4,
-      likeCount: 37,
-      commentCount: 8,
-      timeAgo: '2d ago',
-    ),
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -101,8 +18,8 @@ class _SocialScreenState extends State<SocialScreen> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: 1,
         onTap: (index) {
-          if (index == 1) return;
-          Navigator.of(context).pop();
+          if (index == 1) return; // already here
+          goToTab(context, index);
         },
         backgroundColor: const Color(0xFF1A0A3B),
         selectedItemColor: kAccent,
@@ -138,14 +55,10 @@ class _SocialScreenState extends State<SocialScreen> {
                       style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
                     ),
                     const Spacer(),
-                    // + Log a night out button
                     GestureDetector(
-                      onTap: () {
-                        // TODO: navigate to CreatePostScreen
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Post logging — coming soon!')),
-                        );
-                      },
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const CreatePostScreen()),
+                      ),
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                         decoration: BoxDecoration(
@@ -165,12 +78,42 @@ class _SocialScreenState extends State<SocialScreen> {
                 ),
               ),
 
-              // Feed
+              // Feed from Firestore
               Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                  itemCount: _posts.length,
-                  itemBuilder: (context, index) => _postCard(_posts[index]),
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('posts')
+                      .orderBy('created_at', descending: true)
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator(color: Colors.white));
+                    }
+                    if (snapshot.hasError) {
+                      return const Center(
+                        child: Text('Something went wrong.', style: TextStyle(color: Colors.white70)),
+                      );
+                    }
+                    final docs = snapshot.data?.docs ?? [];
+                    if (docs.isEmpty) {
+                      return const Center(
+                        child: Text(
+                          'No posts yet.\nBe the first to log a night!',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.white70, fontSize: 16),
+                        ),
+                      );
+                    }
+                    return ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                      itemCount: docs.length,
+                      itemBuilder: (context, index) {
+                        final data = docs[index].data() as Map<String, dynamic>;
+                        final postId = docs[index].id;
+                        return _PostCard(postId: postId, data: data);
+                      },
+                    );
+                  },
                 ),
               ),
             ],
@@ -179,8 +122,59 @@ class _SocialScreenState extends State<SocialScreen> {
       ),
     );
   }
+}
 
-  Widget _postCard(_Post post) {
+// ── Post card ─────────────────────────────────────────────────────────
+
+class _PostCard extends StatefulWidget {
+  final String postId;
+  final Map<String, dynamic> data;
+
+  const _PostCard({required this.postId, required this.data});
+
+  @override
+  State<_PostCard> createState() => _PostCardState();
+}
+
+class _PostCardState extends State<_PostCard> {
+  bool get _liked {
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final likes = List<String>.from(widget.data['likes'] ?? []);
+    return likes.contains(uid);
+  }
+
+  int get _likeCount => (widget.data['likes'] as List?)?.length ?? 0;
+
+  Future<void> _toggleLike() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    final ref = FirebaseFirestore.instance.collection('posts').doc(widget.postId);
+    if (_liked) {
+      await ref.update({'likes': FieldValue.arrayRemove([uid])});
+    } else {
+      await ref.update({'likes': FieldValue.arrayUnion([uid])});
+    }
+  }
+
+  String _timeAgo(Timestamp? ts) {
+    if (ts == null) return '';
+    final diff = DateTime.now().difference(ts.toDate());
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24)   return '${diff.inHours}h ago';
+    return '${diff.inDays}d ago';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final data     = widget.data;
+    final username = data['username'] as String? ?? 'Raver';
+    final caption  = data['caption']  as String? ?? '';
+    final venueTag = (data['venue_tag'] as String?)?.trim() ?? '';
+    final eventTag = (data['event_tag'] as String?)?.trim() ?? '';
+    final rating   = (data['rating'] as num?)?.toDouble();
+    final commentCount = (data['comment_count'] as int?) ?? 0;
+    final ts       = data['created_at'] as Timestamp?;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
@@ -191,16 +185,16 @@ class _SocialScreenState extends State<SocialScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header — avatar, name, time
+          // Header
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
             child: Row(
               children: [
                 CircleAvatar(
                   radius: 18,
-                  backgroundColor: kAccent.withOpacity(0.35),
+                  backgroundColor: kAccent.withValues(alpha: 0.35),
                   child: Text(
-                    post.initials,
+                    username[0].toUpperCase(),
                     style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
                   ),
                 ),
@@ -209,27 +203,25 @@ class _SocialScreenState extends State<SocialScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(post.username, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
-                      Text(post.timeAgo, style: const TextStyle(color: kMuted, fontSize: 11)),
+                      Text(username, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
+                      Text(_timeAgo(ts), style: const TextStyle(color: kMuted, fontSize: 11)),
                     ],
                   ),
                 ),
-                if (post.rating != null) _ratingBadge(post.rating!),
+                if (rating != null) _ratingBadge(rating),
               ],
             ),
           ),
 
-          // Venue / event tags
-          if (post.venueTag != null || post.eventTag != null)
+          // Tags
+          if (venueTag.isNotEmpty || eventTag.isNotEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
               child: Wrap(
                 spacing: 8,
                 children: [
-                  if (post.venueTag != null)
-                    _tag(Icons.location_on, post.venueTag!),
-                  if (post.eventTag != null)
-                    _tag(Icons.confirmation_number, post.eventTag!),
+                  if (venueTag.isNotEmpty) _tag(Icons.location_on, venueTag),
+                  if (eventTag.isNotEmpty) _tag(Icons.confirmation_number, eventTag),
                 ],
               ),
             ),
@@ -237,44 +229,36 @@ class _SocialScreenState extends State<SocialScreen> {
           // Caption
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
-            child: Text(
-              post.caption,
-              style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.5),
-            ),
+            child: Text(caption, style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.5)),
           ),
 
-          // TODO: image — add Image.network(post.imageUrl) here when real data exists
-
-          // Divider
           Divider(height: 1, color: kBorder),
 
-          // Actions — like + comment
+          // Actions
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: Row(
               children: [
-                _actionButton(
-                  icon: post.liked ? Icons.favorite : Icons.favorite_border,
-                  label: '${post.likeCount}',
-                  color: post.liked ? const Color(0xFFFF6B8A) : kMuted,
-                  onTap: () {
-                    setState(() {
-                      post.liked = !post.liked;
-                      post.likeCount += post.liked ? 1 : -1;
-                    });
-                  },
+                TextButton.icon(
+                  onPressed: _toggleLike,
+                  icon: Icon(
+                    _liked ? Icons.favorite : Icons.favorite_border,
+                    color: _liked ? const Color(0xFFFF6B8A) : kMuted,
+                    size: 18,
+                  ),
+                  label: Text(
+                    '$_likeCount',
+                    style: TextStyle(color: _liked ? const Color(0xFFFF6B8A) : kMuted, fontSize: 13),
+                  ),
+                  style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 10)),
                 ),
-                const SizedBox(width: 4),
-                _actionButton(
-                  icon: Icons.chat_bubble_outline,
-                  label: '${post.commentCount}',
-                  color: kMuted,
-                  onTap: () {
-                    // TODO: navigate to CommentScreen(postId: post.id)
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Comments — coming soon!')),
-                    );
-                  },
+                TextButton.icon(
+                  onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Comments — coming soon!')),
+                  ),
+                  icon: const Icon(Icons.chat_bubble_outline, color: kMuted, size: 18),
+                  label: Text('$commentCount', style: const TextStyle(color: kMuted, fontSize: 13)),
+                  style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 10)),
                 ),
               ],
             ),
@@ -319,22 +303,6 @@ class _SocialScreenState extends State<SocialScreen> {
           const SizedBox(width: 4),
           Text(label, style: const TextStyle(color: kMuted, fontSize: 12)),
         ],
-      ),
-    );
-  }
-
-  Widget _actionButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return TextButton.icon(
-      onPressed: onTap,
-      icon: Icon(icon, color: color, size: 18),
-      label: Text(label, style: TextStyle(color: color, fontSize: 13)),
-      style: TextButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       ),
     );
   }

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'login_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'login_screen.dart';
+import 'navigation_helper.dart';
 
 const Color kSurface = Color(0x14FFFFFF);
 const Color kBorder  = Color(0x22FFFFFF);
@@ -16,7 +17,7 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  int _selectedTab = 3;
+  bool _loading = true;
 
   Map<String, dynamic> _userData = {};
 
@@ -30,9 +31,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
     final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-    if (doc.exists) {
-      setState(() => _userData = doc.data() ?? {});
-    }
+    if (!mounted) return;
+    setState(() {
+      _userData = doc.exists ? (doc.data() ?? {}) : {};
+      _loading = false;
+    });
   }
   
 
@@ -43,20 +46,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedTab,
+        currentIndex: 3,
         onTap: (index) {
-          if (index == 3) return;
-          if (index == 0) {
-            Navigator.of(context).pop();
-            return;
-          }
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                '${['Events', 'Social', 'Marketplace', 'Profile'][index]} — coming soon!',
-              ),
-            ),
-          );
+          if (index == 3) return; // already here
+          goToTab(context, index);
         },
         backgroundColor: const Color(0xFF1A0A3B),
         selectedItemColor: kAccent,
@@ -84,13 +77,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               // Top bar
               Padding(
-                padding: const EdgeInsets.fromLTRB(8, 4, 16, 4),
+                padding: const EdgeInsets.fromLTRB(20, 12, 16, 4),
                 child: Row(
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
                     const Expanded(
                       child: Text(
                         'Profile',
@@ -112,15 +101,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
 
+              // Body
               Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Avatar + name
-                      _avatarCard(displayName),
-                      const SizedBox(height: 20),
+                child: _loading
+                    ? const Center(child: CircularProgressIndicator(color: Colors.white))
+                    : SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _avatarCard(displayName),
+                            const SizedBox(height: 20),
 
                       // This month
                       _sectionLabel('This month'),
@@ -142,13 +133,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ]),
                       const SizedBox(height: 20),
 
-                      // Clubs visited
-                      _sectionLabel('Clubs visited'),
-                      const SizedBox(height: 10),
-                      _clubsCard(),
-                    ],
-                  ),
-                ),
+                            _sectionLabel('Clubs visited'),
+                            const SizedBox(height: 10),
+                            _clubsCard(),
+                          ],
+                        ),
+                      ),
               ),
             ],
           ),
@@ -171,7 +161,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           CircleAvatar(
             radius: 32,
-            backgroundColor: kAccent.withOpacity(0.3),
+            backgroundColor: kAccent.withValues(alpha: 0.3),
             child: Text(
               displayName[0].toUpperCase(),
               style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
@@ -181,15 +171,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                displayName,
-                style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-              ),
+              Text(displayName,
+                  style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 4),
-              Text(
-                FirebaseAuth.instance.currentUser?.email ?? '',
-                style: const TextStyle(color: kMuted, fontSize: 13),
-              ),
+              Text(FirebaseAuth.instance.currentUser?.email ?? '',
+                  style: const TextStyle(color: kMuted, fontSize: 13)),
             ],
           ),
         ],
@@ -221,10 +207,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 Icon(item.icon, color: kAccent, size: 18),
                 const SizedBox(height: 8),
-                Text(
-                  item.value,
-                  style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                ),
+                Text(item.value,
+                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 2),
                 Text(item.label, style: const TextStyle(color: kMuted, fontSize: 11)),
               ],
@@ -236,6 +220,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _clubsCard() {
+    if ((_userData['clubs_visited'] as List<dynamic>? ?? []).isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: kSurface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: kBorder),
+        ),
+        child: const Text('No clubs logged yet.', style: TextStyle(color: kMuted, fontSize: 14)),
+      );
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -270,7 +267,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
-// Simple data class for stat tiles
 class _StatItem {
   final String label;
   final String value;

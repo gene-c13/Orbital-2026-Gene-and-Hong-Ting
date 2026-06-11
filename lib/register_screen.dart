@@ -140,11 +140,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                         onPressed: () async {
                           try {
-                            await FirebaseAuth.instance.createUserWithEmailAndPassword(
+                            final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
                               email: emailController.text.trim(),
                               password: passwordController.text.trim(),
                             );
-                            final user = FirebaseAuth.instance.currentUser;
+                            final user = credential.user;
                             if (user != null) {
                               await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
                                 'hours_this_month': 0,
