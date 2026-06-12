@@ -166,14 +166,18 @@ class _PostCardState extends State<_PostCard> {
 
   @override
   Widget build(BuildContext context) {
-    final data     = widget.data;
-    final username = data['username'] as String? ?? 'Raver';
-    final caption  = data['caption']  as String? ?? '';
-    final venueTag = (data['venue_tag'] as String?)?.trim() ?? '';
-    final eventTag = (data['event_tag'] as String?)?.trim() ?? '';
-    final rating   = (data['rating'] as num?)?.toDouble();
+    final data         = widget.data;
+    final username     = data['username'] as String? ?? 'Raver';
+    final caption      = data['caption']  as String? ?? '';
+    final venueTag     = (data['venue_tag'] as String?)?.trim() ?? '';
+    final eventTag     = (data['event_tag'] as String?)?.trim() ?? '';
+    final rating       = (data['rating'] as num?)?.toDouble();
     final commentCount = (data['comment_count'] as int?) ?? 0;
-    final ts       = data['created_at'] as Timestamp?;
+    final ts           = data['created_at'] as Timestamp?;
+    final puked        = data['puked'] as bool? ?? false;
+    final startTime    = data['start_time'] as String?;
+    final endTime      = data['end_time'] as String?;
+    final hoursOut     = (data['hours_out'] as num?)?.toDouble();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -208,6 +212,7 @@ class _PostCardState extends State<_PostCard> {
                     ],
                   ),
                 ),
+                if (puked) _pukeBadge(),
                 if (rating != null) _ratingBadge(rating),
               ],
             ),
@@ -222,6 +227,25 @@ class _PostCardState extends State<_PostCard> {
                 children: [
                   if (venueTag.isNotEmpty) _tag(Icons.location_on, venueTag),
                   if (eventTag.isNotEmpty) _tag(Icons.confirmation_number, eventTag),
+                ],
+              ),
+            ),
+
+          // Time + hours
+          if (startTime != null || hoursOut != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Row(
+                children: [
+                  const Icon(Icons.access_time, color: kMuted, size: 13),
+                  const SizedBox(width: 4),
+                  Text(
+                    [
+                      if (startTime != null && endTime != null) '$startTime – $endTime',
+                      if (hoursOut != null) '${hoursOut!.toStringAsFixed(1)}h out',
+                    ].join('  ·  '),
+                    style: const TextStyle(color: kMuted, fontSize: 12),
+                  ),
                 ],
               ),
             ),
@@ -265,6 +289,17 @@ class _PostCardState extends State<_PostCard> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _pukeBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0x55FFFFFF)),
+      ),
+      child: const Text('🤮', style: TextStyle(fontSize: 13)),
     );
   }
 
