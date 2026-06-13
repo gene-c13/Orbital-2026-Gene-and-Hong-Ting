@@ -266,8 +266,14 @@ class _EventsScreenState extends State<EventsScreen> {
             children: [
               const Icon(Icons.music_note, color: Color(0xFFB14EFF), size: 16),
               const SizedBox(width: 4),
-              Text(event.dj, style: const TextStyle(color: Colors.white)),
-              const Spacer(),
+              Expanded(
+                child: Text(
+                  event.dj,
+                  style: const TextStyle(color: Colors.white),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
               const Icon(Icons.access_time, color: Color(0xFFB14EFF), size: 16),
               const SizedBox(width: 4),
               Text(event.time, style: const TextStyle(color: Colors.white)),
