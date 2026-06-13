@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'firebase_options.dart';
 import 'login_screen.dart';
 
@@ -35,6 +36,9 @@ class MyApp extends StatelessWidget {
         //
         // This works for code too, not just values: Most code changes can be
         // tested with just a hot reload.
+        textTheme: GoogleFonts.poppinsTextTheme(
+          ThemeData.dark().textTheme,
+        ),
         colorScheme: .fromSeed(seedColor: Colors.deepPurple),
       ),
       home: const LoginScreen(),

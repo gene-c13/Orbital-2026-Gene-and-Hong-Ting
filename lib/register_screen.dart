@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'events_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'email_verification_screen.dart';
+
+const Color _kAccent = Color(0xFFB14EFF);
+const Color _kMuted  = Color(0xCCFFFFFF);
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -11,15 +14,114 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final emailController = TextEditingController();
-  final passwordController = TextEditingController();
+  final _emailController    = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmController  = TextEditingController();
+
+  bool _showPassword        = false;
+  bool _showConfirm         = false;
+  bool _submitting          = false;
 
   @override
   void dispose() {
-    emailController.dispose();
-    passwordController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmController.dispose();
     super.dispose();
   }
+
+  // ── Password strength ─────────────────────────────────────────────────
+
+  bool get _hasMinLength  => _passwordController.text.length >= 8;
+  bool get _hasUppercase  => _passwordController.text.contains(RegExp(r'[A-Z]'));
+  bool get _hasNumber     => _passwordController.text.contains(RegExp(r'[0-9]'));
+  bool get _hasSpecial    => _passwordController.text.contains(RegExp(r'[!@#\$%^&*(),.?":{}|<>_\-]'));
+
+  /// 0 = empty, 1 = weak, 2 = medium, 3 = strong
+  int get _strength {
+    final p = _passwordController.text;
+    if (p.isEmpty) return 0;
+    int score = [_hasMinLength, _hasUppercase, _hasNumber, _hasSpecial]
+        .where((c) => c)
+        .length;
+    if (score <= 1) return 1;
+    if (score <= 2) return 2;
+    return 3;
+  }
+
+  Color get _strengthColor {
+    switch (_strength) {
+      case 1: return const Color(0xFFFF4D4D);
+      case 2: return const Color(0xFFFFB547);
+      case 3: return const Color(0xFF4CAF50);
+      default: return Colors.transparent;
+    }
+  }
+
+  String get _strengthLabel {
+    switch (_strength) {
+      case 1: return 'Weak';
+      case 2: return 'Medium';
+      case 3: return 'Strong';
+      default: return '';
+    }
+  }
+
+  // ── Submit ────────────────────────────────────────────────────────────
+
+  Future<void> _submit() async {
+    final email    = _emailController.text.trim();
+    final password = _passwordController.text;
+    final confirm  = _confirmController.text;
+
+    if (email.isEmpty || password.isEmpty) { _snack('Please fill in all fields.'); return; }
+    if (!_hasMinLength) { _snack('Password must be at least 8 characters.'); return; }
+    if (!_hasUppercase) { _snack('Password needs at least one uppercase letter.'); return; }
+    if (!_hasNumber)    { _snack('Password needs at least one number.'); return; }
+    if (!_hasSpecial)   { _snack('Password needs at least one special character (!@#\$%...).'); return; }
+    if (password != confirm) { _snack("Passwords don't match."); return; }
+
+    setState(() => _submitting = true);
+
+    try {
+      final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      final user = credential.user;
+
+      if (user != null) {
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'hours_this_month': 0,
+          'events_this_month': 0,
+          'puke_count': 0,
+          'total_events': 0,
+          'favourite_venue': '',
+          'favourite_genre': '',
+          'clubs_visited': [],
+        });
+        await user.sendEmailVerification();
+      }
+
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const EmailVerificationScreen()),
+      );
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      String message = 'Something went wrong.';
+      if (e.code == 'email-already-in-use') message = 'That email already has an account.';
+      else if (e.code == 'invalid-email')   message = "That email doesn't look right.";
+      _snack(message);
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  void _snack(String msg) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+
+  // ── Build ─────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -34,86 +136,89 @@ class _RegisterScreenState extends State<RegisterScreen> {
             colors: [Color(0xFF0F0420), Color(0xFF2B0B3A), Color(0xFF1A0533)],
           ),
         ),
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Image.asset(
-                'assets/images/after_hours_logo.png',
-                height: 260,
-              ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 40),
+              Image.asset('assets/images/after_hours_logo.png', height: 200),
+              const SizedBox(height: 4),
               const Text(
                 'LESS PLANNING. MORE PARTYING.',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Color(0xCCB14EFF),
-                  letterSpacing: 2,
-                ),
+                style: TextStyle(fontSize: 13, color: Color(0xCCB14EFF), letterSpacing: 2),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 28),
+
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   color: const Color(0x14FFFFFF),
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(color: const Color(0x44B14EFF)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0x559D4EDD),
-                      blurRadius: 40,
-                      spreadRadius: 2,
-                    ),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x559D4EDD), blurRadius: 40, spreadRadius: 2),
                   ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Email',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                    ),
+                    // Email
+                    _label('Email'),
                     const SizedBox(height: 8),
-                    TextField(
-                      controller: emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      style: const TextStyle(color: Colors.white),
-                      cursorColor: Colors.white,
-                      decoration: InputDecoration(
-                        hintText: 'your@email.com',
-                        hintStyle: const TextStyle(color: Color(0x80FFFFFF)),
-                        filled: true,
-                        fillColor: const Color(0x26FFFFFF),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
+                    _textField(
+                      controller: _emailController,
+                      hint: 'your@email.com',
+                      keyboard: TextInputType.emailAddress,
+                      action: TextInputAction.next,
                     ),
                     const SizedBox(height: 16),
-                    const Text(
-                      'Password (6+ characters)',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                    ),
+
+                    // Password
+                    _label('Password'),
                     const SizedBox(height: 8),
-                    TextField(
-                      controller: passwordController,
-                      obscureText: true,
-                      style: const TextStyle(color: Colors.white),
-                      cursorColor: Colors.white,
-                      decoration: InputDecoration(
-                        hintText: '••••••••',
-                        hintStyle: const TextStyle(color: Color(0x80FFFFFF)),
-                        filled: true,
-                        fillColor: const Color(0x26FFFFFF),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
+                    _textField(
+                      controller: _passwordController,
+                      hint: '••••••••',
+                      obscure: !_showPassword,
+                      action: TextInputAction.next,
+                      onChanged: (_) => setState(() {}),
+                      suffix: _eyeIcon(_showPassword, () => setState(() => _showPassword = !_showPassword)),
+                    ),
+
+                    // Strength bar + requirements
+                    if (_passwordController.text.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      _strengthBar(),
+                      const SizedBox(height: 6),
+                      _requirements(),
+                    ],
+                    const SizedBox(height: 16),
+
+                    // Confirm
+                    _label('Confirm password'),
+                    const SizedBox(height: 8),
+                    _textField(
+                      controller: _confirmController,
+                      hint: '••••••••',
+                      obscure: !_showConfirm,
+                      action: TextInputAction.done,
+                      onChanged: (_) => setState(() {}),
+                      suffix: _eyeIcon(_showConfirm, () => setState(() => _showConfirm = !_showConfirm)),
+                      onSubmitted: (_) => _submit(),
+                    ),
+
+                    if (_confirmController.text.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: _req(
+                          'Passwords match',
+                          _passwordController.text == _confirmController.text,
                         ),
                       ),
-                    ),
+
                     const SizedBox(height: 24),
+
+                    // Button
                     Container(
                       width: double.infinity,
                       decoration: BoxDecoration(
@@ -121,12 +226,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           colors: [Color(0xFFB14EFF), Color(0xFFFF2D95)],
                         ),
                         borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0x66FF2D95),
-                            blurRadius: 24,
-                            spreadRadius: 1,
-                          ),
+                        boxShadow: const [
+                          BoxShadow(color: Color(0x66FF2D95), blurRadius: 24, spreadRadius: 1),
                         ],
                       ),
                       child: ElevatedButton(
@@ -134,66 +235,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           backgroundColor: Colors.transparent,
                           shadowColor: Colors.transparent,
                           padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
-                        onPressed: () async {
-                          try {
-                            final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-                              email: emailController.text.trim(),
-                              password: passwordController.text.trim(),
-                            );
-                            final user = credential.user;
-                            if (user != null) {
-                              await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-                                'hours_this_month': 0,
-                                'events_this_month': 0,
-                                'puke_count': 0,
-                                'total_events': 0,
-                                'favourite_venue': '',
-                                'favourite_genre': '',
-                                'clubs_visited': [],
-                              });
-                            }
-                            if (!context.mounted) return;
-                            Navigator.of(context).pushReplacement(
-                              MaterialPageRoute(builder: (context) => const EventsScreen()),
-                            );
-                          } on FirebaseAuthException catch (e) {
-                            String message = 'Something went wrong.';
-                            if (e.code == 'email-already-in-use') {
-                              message = 'That email already has an account.';
-                            } else if (e.code == 'weak-password') {
-                              message = 'Password must be at least 6 characters.';
-                            } else if (e.code == 'invalid-email') {
-                              message = "That email doesn't look right.";
-                            }
-                            if (!context.mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(message)),
-                            );
-                          }
-                        },
-                        child: const Text(
-                          'Create Account',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            letterSpacing: 1,
-                          ),
-                        ),
+                        onPressed: _submitting ? null : _submit,
+                        child: _submitting
+                            ? const SizedBox(
+                                width: 20, height: 20,
+                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                              )
+                            : const Text(
+                                'Create Account',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  letterSpacing: 1,
+                                ),
+                              ),
                       ),
                     ),
                     const SizedBox(height: 8),
+
                     Center(
                       child: TextButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                        },
+                        onPressed: () => Navigator.of(context).pop(),
                         child: const Text(
-                          "Already have an account? Sign in",
+                          'Already have an account? Sign in',
                           style: TextStyle(color: Color(0xCCB14EFF)),
                         ),
                       ),
@@ -201,9 +268,119 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ],
                 ),
               ),
+              const SizedBox(height: 32),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // ── Widget helpers ────────────────────────────────────────────────────
+
+  Widget _label(String text) => Text(
+    text,
+    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+  );
+
+  Widget _textField({
+    required TextEditingController controller,
+    required String hint,
+    TextInputType keyboard = TextInputType.text,
+    TextInputAction action = TextInputAction.next,
+    bool obscure = false,
+    Widget? suffix,
+    ValueChanged<String>? onChanged,
+    ValueChanged<String>? onSubmitted,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboard,
+      textInputAction: action,
+      obscureText: obscure,
+      onChanged: onChanged,
+      onSubmitted: onSubmitted,
+      style: const TextStyle(color: Colors.white),
+      cursorColor: Colors.white,
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: const TextStyle(color: Color(0x80FFFFFF)),
+        filled: true,
+        fillColor: const Color(0x26FFFFFF),
+        suffixIcon: suffix,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+      ),
+    );
+  }
+
+  Widget _eyeIcon(bool visible, VoidCallback onTap) => IconButton(
+    icon: Icon(
+      visible ? Icons.visibility_off : Icons.visibility,
+      color: _kMuted,
+      size: 20,
+    ),
+    onPressed: onTap,
+  );
+
+  Widget _strengthBar() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: _strength / 3,
+            backgroundColor: const Color(0x33FFFFFF),
+            valueColor: AlwaysStoppedAnimation<Color>(_strengthColor),
+            minHeight: 4,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          _strengthLabel,
+          style: TextStyle(
+            color: _strengthColor,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _requirements() {
+    return Column(
+      children: [
+        _req('At least 8 characters', _hasMinLength),
+        _req('One uppercase letter (A–Z)', _hasUppercase),
+        _req('One number (0–9)', _hasNumber),
+        _req('One special character (!@#\$%...)', _hasSpecial),
+      ],
+    );
+  }
+
+  Widget _req(String label, bool met) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 3),
+      child: Row(
+        children: [
+          Icon(
+            met ? Icons.check_circle_outline : Icons.radio_button_unchecked,
+            size: 13,
+            color: met ? const Color(0xFF4CAF50) : const Color(0x66FFFFFF),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: met ? const Color(0xFF4CAF50) : const Color(0x99FFFFFF),
+            ),
+          ),
+        ],
       ),
     );
   }

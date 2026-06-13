@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'events_screen.dart';
 import 'register_screen.dart';
+import 'email_verification_screen.dart';
+import 'username_setup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -16,19 +18,40 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _signIn() async {
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
       if (!mounted) return;
+
+      final user = credential.user;
+      if (user != null && !user.emailVerified) {
+        // Resend verification in case it expired, then gate
+        await user.sendEmailVerification();
+        if (!mounted) return;
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const EmailVerificationScreen()),
+        );
+        return;
+      }
+
+      final hasName = (user?.displayName ?? '').isNotEmpty;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const EventsScreen()),
+        MaterialPageRoute(
+          builder: (_) => hasName ? const EventsScreen() : const UsernameSetupScreen(),
+        ),
       );
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message ?? 'Login failed.')),
-      );
+      String message = 'Login failed.';
+      if (e.code == 'user-not-found' || e.code == 'wrong-password' || e.code == 'invalid-credential') {
+        message = 'Incorrect email or password.';
+      } else if (e.code == 'invalid-email') {
+        message = "That email doesn't look right.";
+      } else if (e.code == 'too-many-requests') {
+        message = 'Too many attempts. Try again later.';
+      }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     }
   }
   @override
