@@ -92,7 +92,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             _sectionLabel('This month'),
                             const SizedBox(height: 10),
                             _statsRow([
-                              _StatItem(label: 'Hours out',  value: '${_userData['hours_this_month'] ?? 0}h',  icon: Icons.nightlife),
+                              _StatItem(label: 'Hours out',  value: '${((_userData['hours_this_month'] ?? 0) as num).toStringAsFixed(1)}h',  icon: Icons.nightlife),
                               _StatItem(label: 'Events',     value: '${_userData['events_this_month'] ?? 0}',  icon: Icons.calendar_today),
                               _StatItem(label: 'Puke count', value: '${_userData['puke_count'] ?? 0} 🤮',       icon: Icons.sick),
                             ]),
