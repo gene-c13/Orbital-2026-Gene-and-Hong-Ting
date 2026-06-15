@@ -133,6 +133,27 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       return;
     }
 
+    if (_startTime == null || _endTime == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please set your arrival and leaving time.')),
+      );
+      return;
+    }
+
+    if (_rating == 0) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content: Text('Please rate your night.')),
+  );
+  return;
+}
+
+    if (_venueController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter the venue.')),
+      );
+      return;
+    }
+    
     setState(() => _submitting = true);
 
     try {
