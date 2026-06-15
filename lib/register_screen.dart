@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'app_theme.dart';
 import 'email_verification_screen.dart';
-
-const Color _kAccent = Color(0xFFB14EFF);
-const Color _kMuted  = Color(0xCCFFFFFF);
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -18,9 +16,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
   final _confirmController  = TextEditingController();
 
-  bool _showPassword        = false;
-  bool _showConfirm         = false;
-  bool _submitting          = false;
+  bool _showPassword = false;
+  bool _showConfirm  = false;
+  bool _submitting   = false;
 
   @override
   void dispose() {
@@ -30,20 +28,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  // ── Password strength ─────────────────────────────────────────────────
-
   bool get _hasMinLength  => _passwordController.text.length >= 8;
   bool get _hasUppercase  => _passwordController.text.contains(RegExp(r'[A-Z]'));
   bool get _hasNumber     => _passwordController.text.contains(RegExp(r'[0-9]'));
   bool get _hasSpecial    => _passwordController.text.contains(RegExp(r'[!@#\$%^&*(),.?":{}|<>_\-]'));
 
-  /// 0 = empty, 1 = weak, 2 = medium, 3 = strong
   int get _strength {
     final p = _passwordController.text;
     if (p.isEmpty) return 0;
-    int score = [_hasMinLength, _hasUppercase, _hasNumber, _hasSpecial]
-        .where((c) => c)
-        .length;
+    final score = [_hasMinLength, _hasUppercase, _hasNumber, _hasSpecial].where((c) => c).length;
     if (score <= 1) return 1;
     if (score <= 2) return 2;
     return 3;
@@ -66,8 +59,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       default: return '';
     }
   }
-
-  // ── Submit ────────────────────────────────────────────────────────────
 
   Future<void> _submit() async {
     final email    = _emailController.text.trim();
@@ -92,13 +83,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       if (user != null) {
         await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-          'hours_this_month': 0,
+          'hours_this_month':  0,
           'events_this_month': 0,
-          'puke_count': 0,
-          'total_events': 0,
-          'favourite_venue': '',
-          'favourite_genre': '',
-          'clubs_visited': [],
+          'puke_count':        0,
+          'total_events':      0,
+          'favourite_venue':   '',
+          'favourite_genre':   '',
+          'clubs_visited':     [],
         });
         await user.sendEmailVerification();
       }
@@ -110,8 +101,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
       String message = 'Something went wrong.';
-      if (e.code == 'email-already-in-use') message = 'That email already has an account.';
-      else if (e.code == 'invalid-email')   message = "That email doesn't look right.";
+      if (e.code == 'email-already-in-use') { message = 'That email already has an account.'; }
+      else if (e.code == 'invalid-email')   { message = "That email doesn't look right."; }
       _snack(message);
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -121,21 +112,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void _snack(String msg) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
 
-  // ── Build ─────────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF0F0420), Color(0xFF2B0B3A), Color(0xFF1A0533)],
-          ),
-        ),
+        decoration: kBgDecorationAuth,
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Column(
@@ -162,7 +145,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Email
                     _label('Email'),
                     const SizedBox(height: 8),
                     _textField(
@@ -173,7 +155,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Password
                     _label('Password'),
                     const SizedBox(height: 8),
                     _textField(
@@ -185,7 +166,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       suffix: _eyeIcon(_showPassword, () => setState(() => _showPassword = !_showPassword)),
                     ),
 
-                    // Strength bar + requirements
                     if (_passwordController.text.isNotEmpty) ...[
                       const SizedBox(height: 10),
                       _strengthBar(),
@@ -194,7 +174,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ],
                     const SizedBox(height: 16),
 
-                    // Confirm
                     _label('Confirm password'),
                     const SizedBox(height: 8),
                     _textField(
@@ -210,51 +189,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     if (_confirmController.text.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: 6),
-                        child: _req(
-                          'Passwords match',
-                          _passwordController.text == _confirmController.text,
-                        ),
+                        child: _req('Passwords match',
+                            _passwordController.text == _confirmController.text),
                       ),
 
                     const SizedBox(height: 24),
 
-                    // Button
-                    Container(
+                    SizedBox(
                       width: double.infinity,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFFB14EFF), Color(0xFFFF2D95)],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: const [
-                          BoxShadow(color: Color(0x66FF2D95), blurRadius: 24, spreadRadius: 1),
-                        ],
-                      ),
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          shadowColor: Colors.transparent,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        onPressed: _submitting ? null : _submit,
-                        child: _submitting
-                            ? const SizedBox(
-                                width: 20, height: 20,
-                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                              )
-                            : const Text(
-                                'Create Account',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                  letterSpacing: 1,
+                      height: 52,
+                      child: Container(
+                        decoration: kPrimaryButtonDecoration,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                          onPressed: _submitting ? null : _submit,
+                          child: _submitting
+                              ? const SizedBox(
+                                  width: 20, height: 20,
+                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                )
+                              : const Text(
+                                  'Create Account',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    letterSpacing: 1,
+                                  ),
                                 ),
-                              ),
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 4),
 
                     Center(
                       child: TextButton(
@@ -275,8 +245,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
     );
   }
-
-  // ── Widget helpers ────────────────────────────────────────────────────
 
   Widget _label(String text) => Text(
     text,
@@ -319,7 +287,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget _eyeIcon(bool visible, VoidCallback onTap) => IconButton(
     icon: Icon(
       visible ? Icons.visibility_off : Icons.visibility,
-      color: _kMuted,
+      color: kMuted,
       size: 20,
     ),
     onPressed: onTap,
@@ -341,11 +309,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         const SizedBox(height: 4),
         Text(
           _strengthLabel,
-          style: TextStyle(
-            color: _strengthColor,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(color: _strengthColor, fontSize: 12, fontWeight: FontWeight.w600),
         ),
       ],
     );
@@ -370,14 +334,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
           Icon(
             met ? Icons.check_circle_outline : Icons.radio_button_unchecked,
             size: 13,
-            color: met ? const Color(0xFF4CAF50) : const Color(0x66FFFFFF),
+            color: met ? const Color(0xFF4CAF50) : const Color(0x55FFFFFF),
           ),
           const SizedBox(width: 6),
           Text(
             label,
             style: TextStyle(
               fontSize: 12,
-              color: met ? const Color(0xFF4CAF50) : const Color(0x99FFFFFF),
+              color: met ? const Color(0xFF4CAF50) : const Color(0x88FFFFFF),
             ),
           ),
         ],

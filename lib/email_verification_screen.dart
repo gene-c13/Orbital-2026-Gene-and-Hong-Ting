@@ -1,11 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'app_theme.dart';
 import 'events_screen.dart';
 import 'username_setup_screen.dart';
-
-const Color kAccent = Color(0xFFB14EFF);
-const Color kMuted  = Color(0xCCFFFFFF);
 
 class EmailVerificationScreen extends StatefulWidget {
   const EmailVerificationScreen({super.key});
@@ -16,15 +14,14 @@ class EmailVerificationScreen extends StatefulWidget {
 
 class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   Timer? _pollTimer;
-  bool _resending = false;
-  bool _checking  = false;
-  int  _resendCooldown = 0;
+  bool   _resending       = false;
+  bool   _checking        = false;
+  int    _resendCooldown  = 0;
   Timer? _cooldownTimer;
 
   @override
   void initState() {
     super.initState();
-    // Poll every 5 seconds so the screen can auto-advance once the user clicks the link
     _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) => _checkVerified(auto: true));
   }
 
@@ -63,7 +60,6 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Verification email sent!')),
       );
-      // 60-second cooldown to prevent spam
       setState(() => _resendCooldown = 60);
       _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (t) {
         if (!mounted) { t.cancel(); return; }
@@ -94,20 +90,13 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF0F0420), Color(0xFF2B0B3A), Color(0xFF1A0533)],
-          ),
-        ),
+        decoration: kBgDecorationAuth,
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(32),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Icon
                 Container(
                   width: 80,
                   height: 80,
@@ -126,9 +115,9 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                Text(
+                const Text(
                   'We sent a verification link to',
-                  style: const TextStyle(color: kMuted, fontSize: 15),
+                  style: TextStyle(color: kMuted, fontSize: 15),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 4),
@@ -145,29 +134,31 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                 ),
                 const SizedBox(height: 40),
 
-                // Primary CTA
                 SizedBox(
                   width: double.infinity,
                   height: 52,
-                  child: ElevatedButton(
-                    onPressed: _checking ? null : () => _checkVerified(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: kAccent,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  child: Container(
+                    decoration: kPrimaryButtonDecoration,
+                    child: ElevatedButton(
+                      onPressed: _checking ? null : () => _checkVerified(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      child: _checking
+                          ? const SizedBox(
+                              width: 20, height: 20,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                            )
+                          : const Text("I've verified my email"),
                     ),
-                    child: _checking
-                        ? const SizedBox(
-                            width: 20, height: 20,
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                          )
-                        : const Text("I've verified my email"),
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
 
-                // Resend
                 SizedBox(
                   width: double.infinity,
                   height: 52,
@@ -177,7 +168,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                       foregroundColor: Colors.white,
                       side: BorderSide(color: kAccent.withValues(alpha: 0.5)),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      disabledForegroundColor: kMuted,
+                      disabledForegroundColor: kDim,
                     ),
                     child: _resending
                         ? const SizedBox(
@@ -197,7 +188,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                   onPressed: _signOut,
                   child: const Text(
                     'Use a different account',
-                    style: TextStyle(color: kMuted, fontSize: 13),
+                    style: TextStyle(color: kDim, fontSize: 13),
                   ),
                 ),
               ],

@@ -1,17 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'app_theme.dart';
 import 'event.dart';
 import 'event_service.dart';
 import 'event_detail_screen.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'login_screen.dart';
 import 'navigation_helper.dart';
-
-
-const Color kSurface = Color(0x14FFFFFF);  // translucent white card
-const Color kBorder = Color(0x22FFFFFF);   // subtle border
-const Color kAccent = Color(0xFFB14EFF);   // purple accent
-const Color kMuted = Color(0xCCFFFFFF);    // faded white
 
 class EventsScreen extends StatefulWidget {
   const EventsScreen({super.key});
@@ -22,10 +15,9 @@ class EventsScreen extends StatefulWidget {
 
 class _EventsScreenState extends State<EventsScreen> {
   DateTime selectedDate = DateTime.now();
-  int _selectedTab = 0;
-
-  // Dummy events for now — Hong Ting will replace this with real data from Firestore.
   final EventService _eventService = EventService();
+
+  String get _dateKey => DateFormat('yyyy-MM-dd').format(selectedDate);
 
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
@@ -33,10 +25,14 @@ class _EventsScreenState extends State<EventsScreen> {
       initialDate: selectedDate,
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: const ColorScheme.dark(primary: kAccent),
+        ),
+        child: child!,
+      ),
     );
-    if (picked != null) {
-      setState(() => selectedDate = picked);
-    }
+    if (picked != null) setState(() => selectedDate = picked);
   }
 
   void _changeDay(int days) {
@@ -45,255 +41,249 @@ class _EventsScreenState extends State<EventsScreen> {
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
-    bottomNavigationBar: BottomNavigationBar(
-      currentIndex: _selectedTab,
-      onTap: (index) {
-          if (index == 0) return; // already here
-          goToTab(context, index);
-        },
-      backgroundColor: const Color(0xFF1A0A3B),
-      selectedItemColor: kAccent,
-      unselectedItemColor: kMuted,
-      type: BottomNavigationBarType.fixed,
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: 'Events'),
-        BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Social'),
-        BottomNavigationBarItem(icon: Icon(Icons.shopping_bag), label: 'Marketplace'),
-        BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-      ],
-    ),
-    body: Container(
+      bottomNavigationBar: buildNavBar(0, (i) { if (i != 0) goToTab(context, i); }),
+      body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF2E1065), Color(0xFF5B21B6)],
-          ),
-        ),
+        decoration: kBgDecoration,
         child: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('After Hours',
-                        style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-                    TextButton.icon(
-                      onPressed: () async {
-                        await FirebaseAuth.instance.signOut();
-                        if (!context.mounted) return;
-                        Navigator.of(context).pushReplacement(
-                          MaterialPageRoute(builder: (context) => const LoginScreen()),
-                        );
-                      },
-                      icon: const Icon(Icons.logout, color: Colors.white),
-                      label: const Text('Logout', style: TextStyle(color: Colors.white)),
-                    ),
-                  ],
-                ),
-              ),
-
+              _buildHeader(),
+              const Divider(height: 1, thickness: 1, color: kBorder),
               Expanded(
-                child: Container(
-                  width: double.infinity,
-                  margin: const EdgeInsets.all(20),
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: const Color(0x1AFFFFFF),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: const Color(0x33FFFFFF)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(DateFormat('EEEE').format(selectedDate),
-                                  style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
-                              const SizedBox(height: 4),
-                              Text(DateFormat('d MMMM y').format(selectedDate),
-                                  style: const TextStyle(color: Color(0xCCFFFFFF), fontSize: 16)),
-                              const SizedBox(height: 8),
-                              StreamBuilder<List<Event>>(
-                                stream: _eventService.getEventsByDateStream(
-                                  DateFormat('yyyy-MM-dd').format(selectedDate),
-                                ),
-                                builder: (context, snapshot) {
-                                  final count = snapshot.data?.length ?? 0;
-                                  return Text('$count events tonight',
-                                      style: const TextStyle(color: Color(0x99FFFFFF), fontSize: 14));
-                                },
-                              ),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              IconButton(
-                                onPressed: () => _changeDay(-1),
-                                icon: const Icon(Icons.chevron_left, color: Colors.white),
-                              ),
-                              OutlinedButton.icon(
-                                onPressed: _pickDate,
-                                icon: const Icon(Icons.calendar_today, color: Colors.white, size: 16),
-                                label: const Text('Select Date', style: TextStyle(color: Colors.white)),
-                                style: OutlinedButton.styleFrom(
-                                  side: const BorderSide(color: Color(0x33FFFFFF)),
-                                ),
-                              ),
-                              IconButton(
-                                onPressed: () => _changeDay(1),
-                                icon: const Icon(Icons.chevron_right, color: Colors.white),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      Expanded(
-                        child: StreamBuilder<List<Event>>(
-                          stream: _eventService.getEventsByDateStream(
-                            DateFormat('yyyy-MM-dd').format(selectedDate),
-                          ),
-                          builder: (context, snapshot) => _buildEventList(snapshot),
-                        ),
-                      ),
-                    ],
-                  ),
+                child: StreamBuilder<List<Event>>(
+                  stream: _eventService.getEventsByDateStream(_dateKey),
+                  builder: (context, snapshot) => _buildEventList(snapshot),
                 ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 22, 20, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'AFTER HOURS',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 19,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 4,
+            ),
+          ),
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              GestureDetector(
+                onTap: () => _changeDay(-1),
+                child: const Padding(
+                  padding: EdgeInsets.only(right: 12),
+                  child: Icon(Icons.chevron_left, color: Colors.white, size: 28),
+                ),
+              ),
+              Expanded(
+                child: GestureDetector(
+                  onTap: _pickDate,
+                  child: Column(
+                    children: [
+                      Text(
+                        DateFormat('EEEE').format(selectedDate).toUpperCase(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        DateFormat('d MMMM y').format(selectedDate),
+                        style: const TextStyle(color: kMuted, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              GestureDetector(
+                onTap: () => _changeDay(1),
+                child: const Padding(
+                  padding: EdgeInsets.only(left: 12),
+                  child: Icon(Icons.chevron_right, color: Colors.white, size: 28),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          StreamBuilder<List<Event>>(
+            stream: _eventService.getEventsByDateStream(_dateKey),
+            builder: (context, snapshot) {
+              final count = snapshot.data?.length ?? 0;
+              if (count == 0) return const SizedBox.shrink();
+              return Text(
+                '$count ${count == 1 ? "event" : "events"} tonight',
+                style: const TextStyle(color: kDim, fontSize: 12, letterSpacing: 0.3),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildEventList(AsyncSnapshot<List<Event>> snapshot) {
     if (snapshot.connectionState == ConnectionState.waiting) {
-      return const Center(
-        child: CircularProgressIndicator(color: Colors.white),
-      );
+      return const Center(child: CircularProgressIndicator(color: kAccent, strokeWidth: 2));
     }
-
     if (snapshot.hasError) {
       return const Center(
-        child: Text(
-          'Something went wrong. Please try again.',
-          style: TextStyle(color: Colors.white70),
-        ),
+        child: Text('Something went wrong.', style: TextStyle(color: kMuted)),
       );
     }
-
     if (!snapshot.hasData || snapshot.data!.isEmpty) {
-      return const Center(
-        child: Text(
-          'No events tonight.\nCheck back later or pick another date.',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white70, fontSize: 16),
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.nightlife, color: kDim, size: 52),
+            const SizedBox(height: 16),
+            const Text(
+              'Nothing on tonight.',
+              style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 6),
+            const Text('Try a different date.', style: TextStyle(color: kDim, fontSize: 13)),
+          ],
         ),
       );
     }
 
-    final events = snapshot.data!;
     return ListView.builder(
-      itemCount: events.length,
-      itemBuilder: (context, index) {
-        final event = events[index];
-        return GestureDetector(
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => EventDetailScreen(event: event)),
-          ),
-          child: _eventCard(event),
-        );
-      },
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+      itemCount: snapshot.data!.length,
+      itemBuilder: (context, index) => _eventCard(snapshot.data![index]),
     );
   }
 
   Widget _eventCard(Event event) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: kSurface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: kBorder),
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => EventDetailScreen(event: event)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(event.name,
-                    style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-              ),
-              if (event.hasGuestlist)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: kAccent),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: kSurface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: kBorder),
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: 3,
+              child: Container(color: kAccent),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(17, 14, 14, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.bolt, color: kAccent, size: 14),
-                      SizedBox(width: 4),
-                      Text('Guestlist', style: TextStyle(color: Colors.white, fontSize: 12)),
+                      Expanded(
+                        child: Text(
+                          event.name,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            height: 1.2,
+                          ),
+                        ),
+                      ),
+                      if (event.hasGuestlist) ...[
+                        const SizedBox(width: 8),
+                        _guestlistBadge(),
+                      ],
                     ],
                   ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(event.venue, style: const TextStyle(color: Color(0xCCFFFFFF))),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              const Icon(Icons.music_note, color: Color(0xFFB14EFF), size: 16),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  event.dj,
-                  style: const TextStyle(color: Colors.white),
-                  overflow: TextOverflow.ellipsis,
-                ),
+                  const SizedBox(height: 3),
+                  Text(event.venue, style: const TextStyle(color: kMuted, fontSize: 12)),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      const Icon(Icons.music_note, color: kAccent, size: 13),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          event.dj,
+                          style: const TextStyle(color: Colors.white, fontSize: 13),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      _dot(),
+                      const Icon(Icons.access_time, color: kAccent, size: 13),
+                      const SizedBox(width: 3),
+                      Text(event.time, style: const TextStyle(color: Colors.white, fontSize: 13)),
+                      _dot(),
+                      Text(event.price, style: const TextStyle(color: Colors.white, fontSize: 13)),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: event.genres.map(_genreTag).toList(),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      _crowdBadge(event.crowdLevel),
+                    ],
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-              const Icon(Icons.access_time, color: Color(0xFFB14EFF), size: 16),
-              const SizedBox(width: 4),
-              Text(event.time, style: const TextStyle(color: Colors.white)),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              const Icon(Icons.attach_money, color: Color(0xFFB14EFF), size: 16),
-              Text(event.price, style: const TextStyle(color: Colors.white)),
-              const Spacer(),
-              _crowdBadge(event.crowdLevel),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: event.genres.map((g) => _genreTag(g)).toList(),
-          ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _dot() => const Padding(
+    padding: EdgeInsets.symmetric(horizontal: 5),
+    child: Text('·', style: TextStyle(color: kDim, fontSize: 14)),
+  );
+
+  Widget _guestlistBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: kAccent),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.bolt, color: kAccent, size: 12),
+          SizedBox(width: 2),
+          Text('GL', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
         ],
       ),
     );
@@ -306,23 +296,31 @@ class _EventsScreenState extends State<EventsScreen> {
             ? const Color(0xFFE0C040)
             : const Color(0xFF4CAF50);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.7)),
       ),
-      child: Text(level, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold)),
+      child: Text(
+        level.toUpperCase(),
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.5,
+        ),
+      ),
     );
   }
 
   Widget _genreTag(String genre) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFF241B30),
-        borderRadius: BorderRadius.circular(6),
+        color: const Color(0x22B14EFF),
+        borderRadius: BorderRadius.circular(5),
       ),
-      child: Text(genre, style: const TextStyle(color: Colors.white, fontSize: 12)),
+      child: Text(genre, style: const TextStyle(color: kMuted, fontSize: 11)),
     );
   }
 }

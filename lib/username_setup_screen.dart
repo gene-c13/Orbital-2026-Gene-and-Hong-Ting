@@ -1,14 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'app_theme.dart';
 import 'events_screen.dart';
 
-const Color _kAccent = Color(0xFFB14EFF);
-const Color _kMuted  = Color(0xCCFFFFFF);
-const Color _kSurface = Color(0x14FFFFFF);
-const Color _kBorder  = Color(0x44B14EFF);
-
-// Common genre options for the picker
 const _genres = [
   'House', 'Techno', 'Drum & Bass', 'Hip-Hop', 'R&B',
   'Afrobeats', 'Garage', 'Trance', 'Disco', 'Jungle',
@@ -27,7 +22,7 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
   final _venueController = TextEditingController();
 
   String? _selectedGenre;
-  bool _submitting = false;
+  bool    _submitting = false;
 
   @override
   void dispose() {
@@ -40,30 +35,19 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
     final name  = _nameController.text.trim();
     final venue = _venueController.text.trim();
 
-    if (name.isEmpty) {
-      _snack('Please enter your name.');
-      return;
-    }
-    if (name.length < 2) {
-      _snack('Name must be at least 2 characters.');
-      return;
-    }
+    if (name.isEmpty)    { _snack('Please enter your name.'); return; }
+    if (name.length < 2) { _snack('Name must be at least 2 characters.'); return; }
 
     setState(() => _submitting = true);
 
     try {
       final user = FirebaseAuth.instance.currentUser!;
-
       await user.updateDisplayName(name);
-
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .set({
-            'display_name':     name,
-            'favourite_venue':  venue,
-            'favourite_genre':  _selectedGenre ?? '',
-          }, SetOptions(merge: true));
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        'display_name':    name,
+        'favourite_venue': venue,
+        'favourite_genre': _selectedGenre ?? '',
+      }, SetOptions(merge: true));
 
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
@@ -83,7 +67,7 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
   void _showGenrePicker() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF1A0A3B),
+      backgroundColor: const Color(0xFF130228),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -113,13 +97,11 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
                   title: Text(
                     genre,
                     style: TextStyle(
-                      color: selected ? _kAccent : Colors.white,
+                      color: selected ? kAccent : Colors.white,
                       fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
                     ),
                   ),
-                  trailing: selected
-                      ? const Icon(Icons.check, color: _kAccent, size: 18)
-                      : null,
+                  trailing: selected ? const Icon(Icons.check, color: kAccent, size: 18) : null,
                   onTap: () {
                     setState(() => _selectedGenre = genre);
                     Navigator.of(ctx).pop();
@@ -142,20 +124,13 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF0F0420), Color(0xFF2B0B3A), Color(0xFF1A0533)],
-          ),
-        ),
+        decoration: kBgDecorationAuth,
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(32, 32, 32, 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
                 const Text(
                   'Set up your\nprofile',
                   style: TextStyle(
@@ -168,11 +143,10 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
                 const SizedBox(height: 8),
                 const Text(
                   'Tell us a bit about yourself.',
-                  style: TextStyle(color: _kMuted, fontSize: 15),
+                  style: TextStyle(color: kMuted, fontSize: 15),
                 ),
                 const SizedBox(height: 36),
 
-                // Name
                 _fieldLabel('Your name *'),
                 const SizedBox(height: 8),
                 _inputField(
@@ -185,7 +159,6 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // Favourite venue
                 _fieldLabel('Favourite venue'),
                 const SizedBox(height: 8),
                 _inputField(
@@ -197,7 +170,6 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // Favourite genre — tap to open picker
                 _fieldLabel('Favourite music genre'),
                 const SizedBox(height: 8),
                 GestureDetector(
@@ -206,15 +178,15 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 17),
                     decoration: BoxDecoration(
-                      color: _kSurface,
+                      color: kSurface,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: _kBorder),
+                      border: Border.all(color: const Color(0x44B14EFF)),
                     ),
                     child: Row(
                       children: [
                         Icon(
                           Icons.music_note_outlined,
-                          color: _selectedGenre != null ? _kAccent : const Color(0x55FFFFFF),
+                          color: _selectedGenre != null ? kAccent : kDim,
                           size: 22,
                         ),
                         const SizedBox(width: 12),
@@ -222,14 +194,14 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
                           child: Text(
                             _selectedGenre ?? 'Select a genre...',
                             style: TextStyle(
-                              color: _selectedGenre != null ? Colors.white : const Color(0x55FFFFFF),
+                              color: _selectedGenre != null ? Colors.white : kDim,
                               fontSize: 16,
                             ),
                           ),
                         ),
                         Icon(
                           Icons.keyboard_arrow_down,
-                          color: _selectedGenre != null ? _kAccent : const Color(0x55FFFFFF),
+                          color: _selectedGenre != null ? kAccent : kDim,
                           size: 20,
                         ),
                       ],
@@ -239,28 +211,19 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
 
                 const Spacer(),
 
-                // Continue button
                 SizedBox(
                   width: double.infinity,
                   height: 56,
                   child: AnimatedOpacity(
                     duration: const Duration(milliseconds: 200),
-                    opacity: nameReady ? 1.0 : 0.45,
+                    opacity: nameReady ? 1.0 : 0.4,
                     child: Container(
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFFB14EFF), Color(0xFFFF2D95)],
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: nameReady
-                            ? const [BoxShadow(color: Color(0x66FF2D95), blurRadius: 24, spreadRadius: 1)]
-                            : [],
-                      ),
+                      decoration: kPrimaryButtonDecoration,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.transparent,
                           shadowColor: Colors.transparent,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         ),
                         onPressed: _submitting ? null : _save,
                         child: _submitting
@@ -289,11 +252,9 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
     );
   }
 
-  // ── Widget helpers ────────────────────────────────────────────────────
-
   Widget _fieldLabel(String text) => Text(
     text,
-    style: const TextStyle(color: _kMuted, fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: 0.4),
+    style: const TextStyle(color: kMuted, fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: 0.4),
   );
 
   Widget _inputField({
@@ -307,14 +268,14 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: _kSurface,
+        color: kSurface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _kBorder),
+        border: Border.all(color: const Color(0x44B14EFF)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
       child: Row(
         children: [
-          Icon(icon, color: _kAccent, size: 22),
+          Icon(icon, color: kAccent, size: 22),
           const SizedBox(width: 12),
           Expanded(
             child: TextField(
@@ -324,10 +285,10 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
               onChanged: onChanged,
               onSubmitted: onSubmitted,
               style: const TextStyle(color: Colors.white, fontSize: 16),
-              cursorColor: _kAccent,
+              cursorColor: kAccent,
               decoration: InputDecoration(
                 hintText: hint,
-                hintStyle: const TextStyle(color: Color(0x55FFFFFF), fontSize: 16),
+                hintStyle: const TextStyle(color: kDim, fontSize: 16),
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(vertical: 16),
               ),

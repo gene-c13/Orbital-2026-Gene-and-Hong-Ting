@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'app_theme.dart';
 import 'event.dart';
-
-const Color kSurface = Color(0x14FFFFFF);
-const Color kBorder = Color(0x22FFFFFF);
-const Color kAccent = Color(0xFFB14EFF);
-const Color kMuted = Color(0xCCFFFFFF);
+import 'navigation_helper.dart';
 
 class EventDetailScreen extends StatelessWidget {
   final Event event;
@@ -27,80 +24,48 @@ class EventDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 0,
-        onTap: (index) {
-          if (index == 0) {
-            Navigator.of(context).pop();
-            return;
-          }
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                '${['Events', 'Social', 'Marketplace', 'Profile'][index]} — coming soon!',
-              ),
-            ),
-          );
-        },
-        backgroundColor: const Color(0xFF1A0A3B),
-        selectedItemColor: kAccent,
-        unselectedItemColor: kMuted,
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: 'Events'),
-          BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Social'),
-          BottomNavigationBarItem(icon: Icon(Icons.shopping_bag), label: 'Marketplace'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-        ],
-      ),
+      bottomNavigationBar: buildNavBar(0, (i) {
+        if (i == 0) {
+          Navigator.of(context).pop();
+          return;
+        }
+        goToTab(context, i);
+      }),
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF2E1065), Color(0xFF5B21B6)],
-          ),
-        ),
+        decoration: kBgDecoration,
         child: SafeArea(
           child: Column(
             children: [
-              // Top bar
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 child: Row(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+                      icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 18),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                     const Expanded(
                       child: Text(
                         'Event Details',
-                        style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
                       ),
                     ),
                   ],
                 ),
               ),
-
-              // Scrollable content
+              const Divider(height: 1, thickness: 1, color: kBorder),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Hero card — name, venue, guestlist badge
                       _heroCard(),
-                      const SizedBox(height: 16),
-
-                      // Info grid
+                      const SizedBox(height: 12),
                       _infoGrid(),
-                      const SizedBox(height: 16),
-
-                      // Genres
+                      const SizedBox(height: 12),
                       _section(
                         label: 'Genres',
                         child: Wrap(
@@ -109,40 +74,35 @@ class EventDetailScreen extends StatelessWidget {
                           children: event.genres.map(_genreTag).toList(),
                         ),
                       ),
-                      const SizedBox(height: 16),
 
-                      if (event.description.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 16),
-                          child: _section(
-                            label: 'About this event',
-                            child: Text(
-                              event.description,
-                              style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.6),
-                            ),
+                      if (event.description.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        _section(
+                          label: 'About this event',
+                          child: Text(
+                            event.description,
+                            style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.6),
                           ),
                         ),
+                      ],
 
-                      if (event.artistBio.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 16),
-                          child: _section(
-                            label: 'About the artist',
-                            child: Text(
-                              event.artistBio,
-                              style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.6),
-                            ),
+                      if (event.artistBio.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        _section(
+                          label: 'About the artist',
+                          child: Text(
+                            event.artistBio,
+                            style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.6),
                           ),
                         ),
+                      ],
 
-                      // Crowd level
+                      const SizedBox(height: 12),
                       _section(
                         label: 'Expected crowd',
                         child: _crowdBar(event.crowdLevel),
                       ),
-                      const SizedBox(height: 28),
-
-                      // Buy tickets button
+                      const SizedBox(height: 24),
                       _buyButton(context),
                     ],
                   ),
@@ -155,52 +115,64 @@ class EventDetailScreen extends StatelessWidget {
     );
   }
 
-  // ── Widgets ──────────────────────────────────────────────────────────
-
   Widget _heroCard() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: kSurface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: kBorder),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          if (event.hasGuestlist)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: kAccent),
+          Positioned(left: 0, top: 0, bottom: 0, width: 3, child: Container(color: kAccent)),
+          Padding(
+            padding: const EdgeInsets.only(left: 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (event.hasGuestlist)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: kAccent),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.bolt, color: kAccent, size: 13),
+                          SizedBox(width: 3),
+                          Text('Guestlist available', style: TextStyle(color: Colors.white, fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                  ),
+                Text(
+                  event.name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    height: 1.2,
+                  ),
                 ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
+                const SizedBox(height: 6),
+                Row(
                   children: [
-                    Icon(Icons.bolt, color: kAccent, size: 14),
-                    SizedBox(width: 4),
-                    Text('Guestlist available', style: TextStyle(color: Colors.white, fontSize: 12)),
+                    const Icon(Icons.location_on, color: kAccent, size: 14),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(event.venue, style: const TextStyle(color: kMuted, fontSize: 14)),
+                    ),
                   ],
                 ),
-              ),
+              ],
             ),
-          Text(
-            event.name,
-            style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold, height: 1.2),
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              const Icon(Icons.location_on, color: kAccent, size: 16),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(event.venue, style: const TextStyle(color: kMuted, fontSize: 16)),
-              ),
-            ],
           ),
         ],
       ),
@@ -211,7 +183,7 @@ class EventDetailScreen extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: kSurface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: kBorder),
       ),
       child: Column(
@@ -228,18 +200,19 @@ class EventDetailScreen extends StatelessWidget {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           child: Row(
             children: [
-              Icon(icon, color: kAccent, size: 20),
+              Icon(icon, color: kAccent, size: 18),
               const SizedBox(width: 12),
-              Text(label, style: const TextStyle(color: kMuted, fontSize: 14)),
+              Text(label, style: const TextStyle(color: kMuted, fontSize: 13)),
               const Spacer(),
-              Text(value, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600)),
+              Text(value,
+                  style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
             ],
           ),
         ),
-        if (divider) Divider(height: 1, color: kBorder),
+        if (divider) const Divider(height: 1, color: kBorder),
       ],
     );
   }
@@ -247,16 +220,19 @@ class EventDetailScreen extends StatelessWidget {
   Widget _section({required String label, required Widget child}) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: kSurface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: kBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: kMuted, fontSize: 13, fontWeight: FontWeight.w600)),
+          Text(
+            label.toUpperCase(),
+            style: const TextStyle(color: kDim, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.2),
+          ),
           const SizedBox(height: 12),
           child,
         ],
@@ -271,26 +247,25 @@ class EventDetailScreen extends StatelessWidget {
             ? const Color(0xFFE0C040)
             : const Color(0xFF4CAF50);
 
-    final int filledSegments = level == 'High' ? 3 : level == 'Medium' ? 2 : 1;
+    final int filled = level == 'High' ? 3 : level == 'Medium' ? 2 : 1;
     final String description = level == 'High'
-        ? 'Expect it to be packed — arrive early.'
+        ? 'Packed — arrive early.'
         : level == 'Medium'
-            ? 'Moderate crowd — comfortable evening out.'
-            : 'Quiet night — plenty of space.';
+            ? 'Moderate crowd — comfortable night out.'
+            : 'Quiet — plenty of room.';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: List.generate(3, (i) {
-            final filled = i < filledSegments;
             return Expanded(
               child: Container(
-                height: 8,
+                height: 6,
                 margin: EdgeInsets.only(right: i < 2 ? 6 : 0),
                 decoration: BoxDecoration(
-                  color: filled ? color : const Color(0x33FFFFFF),
-                  borderRadius: BorderRadius.circular(4),
+                  color: i < filled ? color : const Color(0x22FFFFFF),
+                  borderRadius: BorderRadius.circular(3),
                 ),
               ),
             );
@@ -300,12 +275,15 @@ class EventDetailScreen extends StatelessWidget {
         Row(
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(6),
                 border: Border.all(color: color),
               ),
-              child: Text(level, style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.bold)),
+              child: Text(
+                level.toUpperCase(),
+                style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+              ),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -319,12 +297,12 @@ class EventDetailScreen extends StatelessWidget {
 
   Widget _genreTag(String genre) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: const Color(0xFF241B30),
-        borderRadius: BorderRadius.circular(8),
+        color: const Color(0x22B14EFF),
+        borderRadius: BorderRadius.circular(6),
       ),
-      child: Text(genre, style: const TextStyle(color: Colors.white, fontSize: 13)),
+      child: Text(genre, style: const TextStyle(color: kMuted, fontSize: 12)),
     );
   }
 
@@ -333,17 +311,21 @@ class EventDetailScreen extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       height: 54,
-      child: ElevatedButton.icon(
-        onPressed: hasLink ? () => _launchTicketUrl(context) : null,
-        icon: const Icon(Icons.confirmation_number_outlined),
-        label: Text(hasLink ? 'Buy Tickets' : 'Tickets — check at door'),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: kAccent,
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: const Color(0x44FFFFFF),
-          disabledForegroundColor: kMuted,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      child: Container(
+        decoration: hasLink ? kPrimaryButtonDecoration : null,
+        child: ElevatedButton.icon(
+          onPressed: hasLink ? () => _launchTicketUrl(context) : null,
+          icon: const Icon(Icons.confirmation_number_outlined, size: 18),
+          label: Text(hasLink ? 'Buy Tickets' : 'Tickets — check at door'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: hasLink ? Colors.transparent : const Color(0x33FFFFFF),
+            shadowColor: Colors.transparent,
+            foregroundColor: Colors.white,
+            disabledForegroundColor: kMuted,
+            disabledBackgroundColor: const Color(0x22FFFFFF),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+          ),
         ),
       ),
     );

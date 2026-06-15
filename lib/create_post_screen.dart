@@ -2,11 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
-const Color kSurface = Color(0x14FFFFFF);
-const Color kBorder  = Color(0x22FFFFFF);
-const Color kAccent  = Color(0xFFB14EFF);
-const Color kMuted   = Color(0xCCFFFFFF);
+import 'app_theme.dart';
 
 class CreatePostScreen extends StatefulWidget {
   const CreatePostScreen({super.key});
@@ -20,11 +16,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   final _venueController   = TextEditingController();
   final _eventController   = TextEditingController();
 
-  double    _rating     = 0;
-  bool      _submitting = false;
-  bool      _puked      = false;
-
-  DateTime  _date      = DateTime.now();
+  double     _rating     = 0;
+  bool       _submitting = false;
+  bool       _puked      = false;
+  DateTime   _date       = DateTime.now();
   TimeOfDay? _startTime;
   TimeOfDay? _endTime;
 
@@ -36,15 +31,12 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     super.dispose();
   }
 
-  // ── Time helpers ──────────────────────────────────────────────────────
-
-  /// Hours between start and end. Handles midnight crossover.
   double _hoursOut() {
     if (_startTime == null || _endTime == null) return 0;
-    final base = DateTime(_date.year, _date.month, _date.day);
-    var start = base.add(Duration(hours: _startTime!.hour, minutes: _startTime!.minute));
-    var end   = base.add(Duration(hours: _endTime!.hour,   minutes: _endTime!.minute));
-    if (end.isBefore(start)) end = end.add(const Duration(days: 1)); // crossed midnight
+    final base  = DateTime(_date.year, _date.month, _date.day);
+    var start   = base.add(Duration(hours: _startTime!.hour, minutes: _startTime!.minute));
+    var end     = base.add(Duration(hours: _endTime!.hour,   minutes: _endTime!.minute));
+    if (end.isBefore(start)) end = end.add(const Duration(days: 1));
     return end.difference(start).inMinutes / 60.0;
   }
 
@@ -83,12 +75,11 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       builder: (ctx) => Container(
         height: 300,
         decoration: const BoxDecoration(
-          color: Color(0xFF1A0A3B),
+          color: Color(0xFF130228),
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
           children: [
-            // Handle + Done button
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 8, 0),
               child: Row(
@@ -133,8 +124,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     );
   }
 
-  // ── Submit ────────────────────────────────────────────────────────────
-
   Future<void> _submit() async {
     final caption = _captionController.text.trim();
     if (caption.isEmpty) {
@@ -152,7 +141,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       final venue    = _venueController.text.trim();
       final hours    = _hoursOut();
 
-      // 1 — Write post
       await FirebaseFirestore.instance.collection('posts').add({
         'uid':           user.uid,
         'username':      username,
@@ -164,32 +152,22 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         'likes':         [],
         'comment_count': 0,
         'puked':         _puked,
-        'night_date':    '${_date.year}-${_date.month.toString().padLeft(2,'0')}-${_date.day.toString().padLeft(2,'0')}',
+        'night_date':    '${_date.year}-${_date.month.toString().padLeft(2, '0')}-${_date.day.toString().padLeft(2, '0')}',
         'start_time':    _startTime != null ? _formatTime(_startTime!) : null,
         'end_time':      _endTime   != null ? _formatTime(_endTime!)   : null,
         'hours_out':     hours > 0 ? hours : null,
         'created_at':    FieldValue.serverTimestamp(),
       });
 
-      // 2 — Update user stats
       final Map<String, dynamic> updates = {
         'events_this_month': FieldValue.increment(1),
         'total_events':      FieldValue.increment(1),
       };
-      if (hours > 0) {
-        updates['hours_this_month'] = FieldValue.increment(hours);
-      }
-      if (_puked) {
-        updates['puke_count'] = FieldValue.increment(1);
-      }
-      if (venue.isNotEmpty) {
-        updates['clubs_visited'] = FieldValue.arrayUnion([venue]);
-      }
+      if (hours > 0) updates['hours_this_month'] = FieldValue.increment(hours);
+      if (_puked)    updates['puke_count']        = FieldValue.increment(1);
+      if (venue.isNotEmpty) updates['clubs_visited'] = FieldValue.arrayUnion([venue]);
 
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .update(updates);
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).update(updates);
 
       if (!mounted) return;
       Navigator.of(context).pop();
@@ -203,8 +181,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     }
   }
 
-  // ── Build ─────────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     final hours = _hoursOut();
@@ -213,19 +189,12 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF2E1065), Color(0xFF5B21B6)],
-          ),
-        ),
+        decoration: kBgDecoration,
         child: SafeArea(
           child: Column(
             children: [
-              // Top bar
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 child: Row(
                   children: [
                     IconButton(
@@ -235,14 +204,14 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                     const Expanded(
                       child: Text(
                         'Log your night',
-                        style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
                       ),
                     ),
                     _submitting
                         ? const Padding(
                             padding: EdgeInsets.symmetric(horizontal: 16),
                             child: SizedBox(
-                              width: 20, height: 20,
+                              width: 18, height: 18,
                               child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                             ),
                           )
@@ -256,53 +225,33 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                   ],
                 ),
               ),
+              const Divider(height: 1, thickness: 1, color: kBorder),
 
-              // Form
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-
-                      // ── Date & time ──────────────────────────────────
                       _card(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'When were you out?',
-                              style: TextStyle(color: kMuted, fontSize: 13, fontWeight: FontWeight.w600),
+                              'WHEN WERE YOU OUT?',
+                              style: TextStyle(color: kDim, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.2),
                             ),
-                            const SizedBox(height: 12),
-
-                            // Date row
-                            _timeRow(
-                              icon: Icons.calendar_today,
-                              label: 'Date',
-                              value: '${_date.day}/${_date.month}/${_date.year}',
-                              onTap: _pickDate,
-                            ),
-                            Divider(height: 20, color: kBorder),
-
-                            // Start time
-                            _timeRow(
-                              icon: Icons.login,
-                              label: 'Arrived',
-                              value: _startTime != null ? _formatTime(_startTime!) : 'Tap to set',
-                              onTap: () => _pickTime(true),
-                            ),
-                            Divider(height: 20, color: kBorder),
-
-                            // End time
-                            _timeRow(
-                              icon: Icons.logout,
-                              label: 'Left',
-                              value: _endTime != null ? _formatTime(_endTime!) : 'Tap to set',
-                              onTap: () => _pickTime(false),
-                            ),
-
-                            // Hours summary
+                            const SizedBox(height: 14),
+                            _timeRow(icon: Icons.calendar_today, label: 'Date',
+                                value: '${_date.day}/${_date.month}/${_date.year}', onTap: _pickDate),
+                            const Divider(height: 20, color: kBorder),
+                            _timeRow(icon: Icons.login, label: 'Arrived',
+                                value: _startTime != null ? _formatTime(_startTime!) : 'Tap to set',
+                                onTap: () => _pickTime(true)),
+                            const Divider(height: 20, color: kBorder),
+                            _timeRow(icon: Icons.logout, label: 'Left',
+                                value: _endTime != null ? _formatTime(_endTime!) : 'Tap to set',
+                                onTap: () => _pickTime(false)),
                             if (hours > 0)
                               Padding(
                                 padding: const EdgeInsets.only(top: 12),
@@ -310,12 +259,12 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                                   width: double.infinity,
                                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                                   decoration: BoxDecoration(
-                                    color: kAccent.withValues(alpha: 0.15),
+                                    color: kAccent.withValues(alpha: 0.12),
                                     borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(color: kAccent.withValues(alpha: 0.4)),
+                                    border: Border.all(color: kAccent.withValues(alpha: 0.35)),
                                   ),
                                   child: Text(
-                                    '${hours.toStringAsFixed(1)} hours out — this will be added to your profile',
+                                    '${hours.toStringAsFixed(1)} hours out',
                                     style: const TextStyle(color: kAccent, fontSize: 12),
                                     textAlign: TextAlign.center,
                                   ),
@@ -324,9 +273,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
 
-                      // ── Caption ──────────────────────────────────────
                       _card(
                         child: TextField(
                           controller: _captionController,
@@ -336,24 +284,23 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                           style: const TextStyle(color: Colors.white, fontSize: 15, height: 1.5),
                           decoration: const InputDecoration(
                             hintText: 'How was your night? Tell the crew...',
-                            hintStyle: TextStyle(color: Color(0x66FFFFFF)),
+                            hintStyle: TextStyle(color: kDim),
                             border: InputBorder.none,
-                            counterStyle: TextStyle(color: Color(0x66FFFFFF)),
+                            counterStyle: TextStyle(color: kDim),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
 
-                      // ── Rating ────────────────────────────────────────
                       _card(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'Rate your night',
-                              style: TextStyle(color: kMuted, fontSize: 13, fontWeight: FontWeight.w600),
+                              'RATE YOUR NIGHT',
+                              style: TextStyle(color: kDim, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.2),
                             ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 14),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                               children: List.generate(5, (i) {
@@ -363,8 +310,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                                   onTap: () => setState(() => _rating = star),
                                   child: Icon(
                                     filled ? Icons.star : Icons.star_border,
-                                    color: filled ? kAccent : const Color(0x55FFFFFF),
-                                    size: 36,
+                                    color: filled ? kAccent : const Color(0x44FFFFFF),
+                                    size: 34,
                                   ),
                                 );
                               }),
@@ -382,81 +329,62 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
 
-                      // ── Puke toggle ───────────────────────────────────
                       GestureDetector(
                         onTap: () => setState(() => _puked = !_puked),
                         child: _card(
                           child: Row(
                             children: [
-                              Text(
-                                '🤮',
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  color: _puked ? null : const Color(0x66FFFFFF),
-                                ),
-                              ),
+                              Text('🤮', style: TextStyle(fontSize: 22, color: _puked ? null : const Color(0x55FFFFFF))),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text(
-                                      'Did you puke?',
-                                      style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
-                                    ),
+                                    const Text('Did you puke?',
+                                        style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
                                     Text(
                                       _puked ? 'Yep… happens to the best of us' : 'Tap to mark the moment',
-                                      style: const TextStyle(color: kMuted, fontSize: 12),
+                                      style: const TextStyle(color: kDim, fontSize: 12),
                                     ),
                                   ],
                                 ),
                               ),
                               AnimatedContainer(
                                 duration: const Duration(milliseconds: 200),
-                                width: 28,
-                                height: 28,
+                                width: 26,
+                                height: 26,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   color: _puked ? kAccent : Colors.transparent,
                                   border: Border.all(
-                                    color: _puked ? kAccent : const Color(0x55FFFFFF),
+                                    color: _puked ? kAccent : const Color(0x44FFFFFF),
                                     width: 2,
                                   ),
                                 ),
                                 child: _puked
-                                    ? const Icon(Icons.check, color: Colors.white, size: 16)
+                                    ? const Icon(Icons.check, color: Colors.white, size: 14)
                                     : null,
                               ),
                             ],
                           ),
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
 
-                      // ── Venue + event tags ────────────────────────────
                       _card(
                         child: Column(
                           children: [
-                            _tagField(
-                              controller: _venueController,
-                              icon: Icons.location_on,
-                              hint: 'Venue (e.g. Fabric)',
-                              divider: true,
-                            ),
-                            _tagField(
-                              controller: _eventController,
-                              icon: Icons.confirmation_number,
-                              hint: 'Event name (optional)',
-                              divider: false,
-                            ),
+                            _tagField(controller: _venueController, icon: Icons.location_on,
+                                hint: 'Venue (e.g. Fabric)', divider: true),
+                            _tagField(controller: _eventController, icon: Icons.confirmation_number,
+                                hint: 'Event name (optional)', divider: false),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
 
-                      // ── Photo placeholder ─────────────────────────────
                       GestureDetector(
                         onTap: () => ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Photo upload coming soon!')),
@@ -464,30 +392,33 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                         child: _card(
                           child: const Row(
                             children: [
-                              Icon(Icons.add_photo_alternate_outlined, color: kAccent, size: 22),
+                              Icon(Icons.add_photo_alternate_outlined, color: kAccent, size: 20),
                               SizedBox(width: 12),
                               Text('Add a photo', style: TextStyle(color: kMuted, fontSize: 14)),
                               Spacer(),
-                              Icon(Icons.chevron_right, color: Color(0x55FFFFFF), size: 20),
+                              Icon(Icons.chevron_right, color: kDim, size: 20),
                             ],
                           ),
                         ),
                       ),
-                      const SizedBox(height: 28),
+                      const SizedBox(height: 24),
 
-                      // ── Post button ───────────────────────────────────
                       SizedBox(
                         width: double.infinity,
                         height: 54,
-                        child: ElevatedButton(
-                          onPressed: _submitting ? null : _submit,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: kAccent,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                            textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        child: Container(
+                          decoration: kPrimaryButtonDecoration,
+                          child: ElevatedButton(
+                            onPressed: _submitting ? null : _submit,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                              textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                            child: const Text('Post to feed'),
                           ),
-                          child: const Text('Post to feed'),
                         ),
                       ),
                     ],
@@ -501,55 +432,44 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     );
   }
 
-  // ── Widget helpers ────────────────────────────────────────────────────
-
   Widget _card({required Widget child}) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: kSurface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: kBorder),
       ),
       child: child,
     );
   }
 
-  Widget _timeRow({
-    required IconData icon,
-    required String label,
-    required String value,
-    required VoidCallback onTap,
-  }) {
+  Widget _timeRow({required IconData icon, required String label, required String value, required VoidCallback onTap}) {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Row(
         children: [
-          Icon(icon, color: kAccent, size: 18),
+          Icon(icon, color: kAccent, size: 17),
           const SizedBox(width: 12),
           Text(label, style: const TextStyle(color: kMuted, fontSize: 14)),
           const Spacer(),
           Text(value, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
-          const SizedBox(width: 6),
-          const Icon(Icons.chevron_right, color: Color(0x55FFFFFF), size: 18),
+          const SizedBox(width: 4),
+          const Icon(Icons.chevron_right, color: kDim, size: 17),
         ],
       ),
     );
   }
 
-  Widget _tagField({
-    required TextEditingController controller,
-    required IconData icon,
-    required String hint,
-    required bool divider,
-  }) {
+  Widget _tagField({required TextEditingController controller, required IconData icon,
+      required String hint, required bool divider}) {
     return Column(
       children: [
         Row(
           children: [
-            Icon(icon, color: kAccent, size: 18),
+            Icon(icon, color: kAccent, size: 17),
             const SizedBox(width: 12),
             Expanded(
               child: TextField(
@@ -557,7 +477,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 style: const TextStyle(color: Colors.white, fontSize: 14),
                 decoration: InputDecoration(
                   hintText: hint,
-                  hintStyle: const TextStyle(color: Color(0x66FFFFFF)),
+                  hintStyle: const TextStyle(color: kDim),
                   border: InputBorder.none,
                   isDense: true,
                   contentPadding: EdgeInsets.zero,
@@ -566,7 +486,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             ),
           ],
         ),
-        if (divider) Divider(height: 20, color: kBorder),
+        if (divider) const Divider(height: 20, color: kBorder),
       ],
     );
   }

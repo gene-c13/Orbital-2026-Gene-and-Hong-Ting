@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'app_theme.dart';
 import 'login_screen.dart';
 import 'navigation_helper.dart';
-
-const Color kSurface = Color(0x14FFFFFF);
-const Color kBorder  = Color(0x22FFFFFF);
-const Color kAccent  = Color(0xFFB14EFF);
-const Color kMuted   = Color(0xCCFFFFFF);
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -18,7 +14,6 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _loading = true;
-
   Map<String, dynamic> _userData = {};
 
   @override
@@ -37,7 +32,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _loading = false;
     });
   }
-  
 
   @override
   Widget build(BuildContext context) {
@@ -45,93 +39,73 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final displayName = user?.displayName ?? user?.email?.split('@').first ?? 'Raver';
 
     return Scaffold(
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 3,
-        onTap: (index) {
-          if (index == 3) return; // already here
-          goToTab(context, index);
-        },
-        backgroundColor: const Color(0xFF1A0A3B),
-        selectedItemColor: kAccent,
-        unselectedItemColor: kMuted,
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: 'Events'),
-          BottomNavigationBarItem(icon: Icon(Icons.people),         label: 'Social'),
-          BottomNavigationBarItem(icon: Icon(Icons.shopping_bag),   label: 'Marketplace'),
-          BottomNavigationBarItem(icon: Icon(Icons.person),         label: 'Profile'),
-        ],
-      ),
+      bottomNavigationBar: buildNavBar(3, (i) { if (i != 3) goToTab(context, i); }),
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF2E1065), Color(0xFF5B21B6)],
-          ),
-        ),
+        decoration: kBgDecoration,
         child: SafeArea(
           child: Column(
             children: [
-              // Top bar
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 16, 4),
+                padding: const EdgeInsets.fromLTRB(20, 20, 16, 12),
                 child: Row(
                   children: [
-                    const Expanded(
-                      child: Text(
-                        'Profile',
-                        style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    const Text(
+                      'PROFILE',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 4,
                       ),
                     ),
-                    TextButton.icon(
-                      onPressed: () async {
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: () async {
                         await FirebaseAuth.instance.signOut();
                         if (!context.mounted) return;
                         Navigator.of(context).pushReplacement(
                           MaterialPageRoute(builder: (_) => const LoginScreen()),
                         );
                       },
-                      icon: const Icon(Icons.logout, color: Colors.white, size: 18),
-                      label: const Text('Logout', style: TextStyle(color: Colors.white, fontSize: 13)),
+                      child: const Padding(
+                        padding: EdgeInsets.all(8),
+                        child: Icon(Icons.logout, color: kDim, size: 20),
+                      ),
                     ),
                   ],
                 ),
               ),
-
-              // Body
+              const Divider(height: 1, thickness: 1, color: kBorder),
               Expanded(
                 child: _loading
-                    ? const Center(child: CircularProgressIndicator(color: Colors.white))
+                    ? const Center(child: CircularProgressIndicator(color: kAccent, strokeWidth: 2))
                     : SingleChildScrollView(
-                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _avatarCard(displayName),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 24),
 
-                      // This month
-                      _sectionLabel('This month'),
-                      const SizedBox(height: 10),
-                      _statsRow([
-                        _StatItem(label: 'Hours out', value: '${_userData['hours_this_month'] ?? 0} h', icon: Icons.nightlife),
-                        _StatItem(label: 'Events',    value: '${_userData['events_this_month'] ?? 0}',  icon: Icons.calendar_today),
-                        _StatItem(label: 'Puke count', value: '${_userData['puke_count'] ?? 0} 🤮',    icon: Icons.sick),
-                      ]),
-                      const SizedBox(height: 20),
+                            _sectionLabel('This month'),
+                            const SizedBox(height: 10),
+                            _statsRow([
+                              _StatItem(label: 'Hours out',  value: '${_userData['hours_this_month'] ?? 0}h',  icon: Icons.nightlife),
+                              _StatItem(label: 'Events',     value: '${_userData['events_this_month'] ?? 0}',  icon: Icons.calendar_today),
+                              _StatItem(label: 'Puke count', value: '${_userData['puke_count'] ?? 0} 🤮',       icon: Icons.sick),
+                            ]),
+                            const SizedBox(height: 24),
 
-                      // All time
-                      _sectionLabel('All time'),
-                      const SizedBox(height: 10),
-                      _statsRow([
-                       _StatItem(label: 'Events attended', value: '${_userData['total_events'] ?? 0}',        icon: Icons.confirmation_number),
-                       _StatItem(label: 'Fave venue',      value: '${_userData['favourite_venue'] ?? 'TBC'}', icon: Icons.location_on),
-                       _StatItem(label: 'Fave genre',      value: '${_userData['favourite_genre'] ?? 'TBC'}', icon: Icons.music_note),
-                      ]),
-                      const SizedBox(height: 20),
+                            _sectionLabel('All time'),
+                            const SizedBox(height: 10),
+                            _statsRow([
+                              _StatItem(label: 'Events',     value: '${_userData['total_events'] ?? 0}',               icon: Icons.confirmation_number),
+                              _StatItem(label: 'Fave venue', value: '${_userData['favourite_venue'] ?? '—'}',           icon: Icons.location_on),
+                              _StatItem(label: 'Fave genre', value: '${_userData['favourite_genre'] ?? '—'}',           icon: Icons.music_note),
+                            ]),
+                            const SizedBox(height: 24),
 
                             _sectionLabel('Clubs visited'),
                             const SizedBox(height: 10),
@@ -147,24 +121,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // ── Widgets ───────────────────────────────────────────────────────────
-
   Widget _avatarCard(String displayName) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: kSurface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: kBorder),
       ),
       child: Row(
         children: [
           CircleAvatar(
-            radius: 32,
-            backgroundColor: kAccent.withValues(alpha: 0.3),
+            radius: 30,
+            backgroundColor: kAccent.withValues(alpha: 0.25),
             child: Text(
               displayName[0].toUpperCase(),
-              style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
+              style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold),
             ),
           ),
           const SizedBox(width: 16),
@@ -172,10 +144,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(displayName,
-                  style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 4),
-              Text(FirebaseAuth.instance.currentUser?.email ?? '',
-                  style: const TextStyle(color: kMuted, fontSize: 13)),
+                  style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 3),
+              Text(
+                FirebaseAuth.instance.currentUser?.email ?? '',
+                style: const TextStyle(color: kDim, fontSize: 12),
+              ),
             ],
           ),
         ],
@@ -186,31 +160,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _sectionLabel(String label) {
     return Text(
       label.toUpperCase(),
-      style: const TextStyle(color: kMuted, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.2),
+      style: const TextStyle(color: kDim, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.5),
     );
   }
 
   Widget _statsRow(List<_StatItem> items) {
     return Row(
-      children: items.map((item) {
+      children: items.mapIndexed((i, item) {
         return Expanded(
           child: Container(
-            margin: EdgeInsets.only(right: item == items.last ? 0 : 10),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+            margin: EdgeInsets.only(right: i < items.length - 1 ? 10 : 0),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
             decoration: BoxDecoration(
               color: kSurface,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(color: kBorder),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(item.icon, color: kAccent, size: 18),
+                Icon(item.icon, color: kAccent, size: 16),
                 const SizedBox(height: 8),
                 Text(item.value,
-                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 2),
-                Text(item.label, style: const TextStyle(color: kMuted, fontSize: 11)),
+                Text(item.label, style: const TextStyle(color: kDim, fontSize: 10, letterSpacing: 0.2)),
               ],
             ),
           ),
@@ -220,49 +194,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _clubsCard() {
-    if ((_userData['clubs_visited'] as List<dynamic>? ?? []).isEmpty) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: kSurface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: kBorder),
-        ),
-        child: const Text('No clubs logged yet.', style: TextStyle(color: kMuted, fontSize: 14)),
-      );
-    }
-
+    final clubs = _userData['clubs_visited'] as List<dynamic>? ?? [];
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: kSurface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: kBorder),
       ),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: (_userData['clubs_visited'] as List<dynamic>? ?? []).map((club) {
-          return Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF241B30),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: kBorder),
+      child: clubs.isEmpty
+          ? const Text('No clubs logged yet.', style: TextStyle(color: kDim, fontSize: 13))
+          : Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: clubs.map((club) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: const Color(0x22B14EFF),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: kBorder),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.nightlife, color: kAccent, size: 13),
+                      const SizedBox(width: 6),
+                      Text(club, style: const TextStyle(color: Colors.white, fontSize: 12)),
+                    ],
+                  ),
+                );
+              }).toList(),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.nightlife, color: kAccent, size: 14),
-                const SizedBox(width: 6),
-                Text(club, style: const TextStyle(color: Colors.white, fontSize: 13)),
-              ],
-            ),
-          );
-        }).toList(),
-      ),
     );
   }
 }
@@ -272,4 +236,12 @@ class _StatItem {
   final String value;
   final IconData icon;
   const _StatItem({required this.label, required this.value, required this.icon});
+}
+
+extension<T> on List<T> {
+  Iterable<R> mapIndexed<R>(R Function(int index, T item) f) sync* {
+    for (var i = 0; i < length; i++) {
+      yield f(i, this[i]);
+    }
+  }
 }
