@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'app_theme.dart';
-import 'event.dart';
-import 'navigation_helper.dart';
+import 'package:after_hours/theme/app_theme.dart';
+import 'package:after_hours/models/event.dart';
+import 'package:after_hours/widgets/navigation_helper.dart';
 
 class EventDetailScreen extends StatelessWidget {
   final Event event;

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'app_theme.dart';
-import 'firebase_options.dart';
-import 'login_screen.dart';
+import 'package:after_hours/theme/app_theme.dart';
+import 'package:after_hours/firebase_options.dart';
+import 'package:after_hours/screens/auth/login_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'event.dart';
+import 'package:after_hours/models/event.dart';
 
 class EventService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;

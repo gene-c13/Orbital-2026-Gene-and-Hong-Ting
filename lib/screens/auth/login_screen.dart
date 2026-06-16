@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'app_theme.dart';
-import 'events_screen.dart';
-import 'register_screen.dart';
-import 'email_verification_screen.dart';
-import 'username_setup_screen.dart';
+import 'package:after_hours/theme/app_theme.dart';
+import 'package:after_hours/screens/events/events_screen.dart';
+import 'package:after_hours/screens/auth/register_screen.dart';
+import 'package:after_hours/screens/auth/email_verification_screen.dart';
+import 'package:after_hours/screens/auth/username_setup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'app_theme.dart';
-import 'create_post_screen.dart';
-import 'navigation_helper.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shimmer/shimmer.dart';
+import 'package:after_hours/theme/app_theme.dart';
+import 'package:after_hours/screens/social/create_post_screen.dart';
+import 'package:after_hours/widgets/navigation_helper.dart';
 
 class SocialScreen extends StatelessWidget {
   const SocialScreen({super.key});
@@ -20,16 +22,18 @@ class SocialScreen extends StatelessWidget {
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 16, 12),
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 18),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     const Text(
                       'SOCIAL',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 19,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 4,
+                        fontSize: 32,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 3,
+                        height: 1,
                       ),
                     ),
                     const Spacer(),
@@ -38,18 +42,23 @@ class SocialScreen extends StatelessWidget {
                         MaterialPageRoute(builder: (_) => const CreatePostScreen()),
                       ),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                         decoration: BoxDecoration(
                           color: kAccent,
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(24),
                         ),
                         child: const Row(
                           children: [
-                            Icon(Icons.add, color: Colors.white, size: 16),
-                            SizedBox(width: 4),
+                            Icon(Icons.add, color: Colors.white, size: 17),
+                            SizedBox(width: 5),
                             Text(
                               'Log night',
-                              style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.2,
+                              ),
                             ),
                           ],
                         ),
@@ -80,20 +89,25 @@ class SocialScreen extends StatelessWidget {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.photo_camera_outlined, color: kDim, size: 52),
-                            const SizedBox(height: 16),
+                            Icon(Icons.photo_camera_outlined, color: kDim, size: 56),
+                            const SizedBox(height: 18),
                             const Text(
                               'No posts yet.',
-                              style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w600),
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 21,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.2,
+                              ),
                             ),
-                            const SizedBox(height: 6),
+                            const SizedBox(height: 8),
                             const Text('Be the first to log a night.', style: TextStyle(color: kDim, fontSize: 13)),
                           ],
                         ),
                       );
                     }
                     return ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
                       itemCount: docs.length,
                       itemBuilder: (context, index) {
                         final data = docs[index].data() as Map<String, dynamic>;
@@ -162,35 +176,36 @@ class _PostCardState extends State<_PostCard> {
     final startTime    = data['start_time'] as String?;
     final endTime      = data['end_time'] as String?;
     final hoursOut     = (data['hours_out'] as num?)?.toDouble();
+    final imageUrl     = (data['image_url'] as String?)?.trim() ?? '';
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: kSurface,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: kBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             child: Row(
               children: [
                 CircleAvatar(
-                  radius: 18,
+                  radius: 20,
                   backgroundColor: kAccent.withValues(alpha: 0.3),
                   child: Text(
                     username[0].toUpperCase(),
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(username, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
+                      Text(username, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
                       Text(_timeAgo(ts), style: const TextStyle(color: kDim, fontSize: 11)),
                     ],
                   ),
@@ -203,7 +218,7 @@ class _PostCardState extends State<_PostCard> {
 
           if (venueTag.isNotEmpty || eventTag.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: Wrap(
                 spacing: 8,
                 children: [
@@ -215,14 +230,14 @@ class _PostCardState extends State<_PostCard> {
 
           if (startTime != null || hoursOut != null)
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
               child: Row(
                 children: [
                   const Icon(Icons.access_time, color: kDim, size: 12),
                   const SizedBox(width: 4),
                   Text(
                     [
-                      if (startTime != null && endTime != null) '$startTime – $endTime',
+                      if (startTime != null && endTime != null) '$startTime - $endTime',
                       if (hoursOut != null) '${hoursOut.toStringAsFixed(1)}h out',
                     ].join('  ·  '),
                     style: const TextStyle(color: kDim, fontSize: 12),
@@ -231,29 +246,55 @@ class _PostCardState extends State<_PostCard> {
               ),
             ),
 
+          if (imageUrl.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: CachedNetworkImage(
+                  imageUrl: imageUrl,
+                  width: double.infinity,
+                  height: 320,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Shimmer.fromColors(
+                    baseColor: kSurface,
+                    highlightColor: kBorder,
+                    child: Container(width: double.infinity, height: 320, color: kSurface),
+                  ),
+                  errorWidget: (context, url, error) => Container(
+                    width: double.infinity,
+                    height: 320,
+                    color: kSurface,
+                    child: const Icon(Icons.broken_image_outlined, color: kDim),
+                  ),
+                ),
+              ),
+            ),
+
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
-            child: Text(caption, style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.5)),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Text(caption, style: const TextStyle(color: Colors.white, fontSize: 15, height: 1.5)),
           ),
 
           const Divider(height: 1, color: kBorder),
 
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: Row(
               children: [
                 TextButton.icon(
                   onPressed: _toggleLike,
                   icon: Icon(
                     _liked ? Icons.favorite : Icons.favorite_border,
-                    color: _liked ? const Color(0xFFFF6B8A) : kDim,
-                    size: 17,
+                    color: _liked ? kPink : kDim,
+                    size: 18,
                   ),
                   label: Text(
                     '$_likeCount',
                     style: TextStyle(
-                      color: _liked ? const Color(0xFFFF6B8A) : kDim,
+                      color: _liked ? kPink : kDim,
                       fontSize: 13,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                   style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
@@ -262,8 +303,11 @@ class _PostCardState extends State<_PostCard> {
                   onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Comments coming soon!')),
                   ),
-                  icon: const Icon(Icons.chat_bubble_outline, color: kDim, size: 17),
-                  label: Text('$commentCount', style: const TextStyle(color: kDim, fontSize: 13)),
+                  icon: const Icon(Icons.chat_bubble_outline, color: kDim, size: 18),
+                  label: Text(
+                    '$commentCount',
+                    style: const TextStyle(color: kDim, fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
                   style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
                 ),
               ],
@@ -276,9 +320,9 @@ class _PostCardState extends State<_PostCard> {
 
   Widget _pukeBadge() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: kBorder),
       ),
       child: const Text('🤮', style: TextStyle(fontSize: 13)),
@@ -287,19 +331,21 @@ class _PostCardState extends State<_PostCard> {
 
   Widget _ratingBadge(double rating) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+      margin: const EdgeInsets.only(left: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: kAccent),
+        color: kAccent.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: kAccent.withValues(alpha: 0.5)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.star, color: kAccent, size: 12),
+          const Icon(Icons.star, color: kAccent, size: 13),
           const SizedBox(width: 3),
           Text(
             rating % 1 == 0 ? '${rating.toInt()}' : '$rating',
-            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800),
           ),
         ],
       ),
@@ -308,17 +354,17 @@ class _PostCardState extends State<_PostCard> {
 
   Widget _tag(IconData icon, String label) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: const Color(0x22B14EFF),
+        color: kAccent.withValues(alpha: 0.16),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: kAccent, size: 11),
-          const SizedBox(width: 4),
-          Text(label, style: const TextStyle(color: kMuted, fontSize: 11)),
+          Icon(icon, color: kAccent, size: 12),
+          const SizedBox(width: 5),
+          Text(label, style: const TextStyle(color: kMuted, fontSize: 12, fontWeight: FontWeight.w600)),
         ],
       ),
     );

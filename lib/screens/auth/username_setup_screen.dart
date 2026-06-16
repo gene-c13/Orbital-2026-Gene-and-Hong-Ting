@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'app_theme.dart';
-import 'events_screen.dart';
+import 'package:after_hours/theme/app_theme.dart';
+import 'package:after_hours/screens/events/events_screen.dart';
 
 const _genres = [
   'House', 'Techno', 'Drum & Bass', 'Hip-Hop', 'R&B',

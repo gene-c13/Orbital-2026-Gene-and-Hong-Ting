@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'app_theme.dart';
-import 'login_screen.dart';
-import 'navigation_helper.dart';
+import 'package:after_hours/theme/app_theme.dart';
+import 'package:after_hours/screens/auth/login_screen.dart';
+import 'package:after_hours/widgets/navigation_helper.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'app_theme.dart';
-import 'event.dart';
-import 'event_service.dart';
-import 'event_detail_screen.dart';
-import 'navigation_helper.dart';
+import 'package:after_hours/theme/app_theme.dart';
+import 'package:after_hours/models/event.dart';
+import 'package:after_hours/services/event_service.dart';
+import 'package:after_hours/screens/events/event_detail_screen.dart';
+import 'package:after_hours/widgets/navigation_helper.dart';
 
 class EventsScreen extends StatefulWidget {
   const EventsScreen({super.key});
@@ -68,7 +68,7 @@ class _EventsScreenState extends State<EventsScreen> {
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 22, 20, 16),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -76,19 +76,20 @@ class _EventsScreenState extends State<EventsScreen> {
             'AFTER HOURS',
             style: TextStyle(
               color: Colors.white,
-              fontSize: 19,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 4,
+              fontSize: 30,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 2,
+              height: 1,
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 22),
           Row(
             children: [
               GestureDetector(
                 onTap: () => _changeDay(-1),
                 child: const Padding(
-                  padding: EdgeInsets.only(right: 12),
-                  child: Icon(Icons.chevron_left, color: Colors.white, size: 28),
+                  padding: EdgeInsets.only(right: 14),
+                  child: Icon(Icons.chevron_left, color: Colors.white, size: 30),
                 ),
               ),
               Expanded(
@@ -100,15 +101,15 @@ class _EventsScreenState extends State<EventsScreen> {
                         DateFormat('EEEE').format(selectedDate).toUpperCase(),
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 2,
+                          fontSize: 19,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 3,
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 3),
                       Text(
                         DateFormat('d MMMM y').format(selectedDate),
-                        style: const TextStyle(color: kMuted, fontSize: 13),
+                        style: const TextStyle(color: kMuted, fontSize: 13, fontWeight: FontWeight.w500),
                       ),
                     ],
                   ),
@@ -117,13 +118,13 @@ class _EventsScreenState extends State<EventsScreen> {
               GestureDetector(
                 onTap: () => _changeDay(1),
                 child: const Padding(
-                  padding: EdgeInsets.only(left: 12),
-                  child: Icon(Icons.chevron_right, color: Colors.white, size: 28),
+                  padding: EdgeInsets.only(left: 14),
+                  child: Icon(Icons.chevron_right, color: Colors.white, size: 30),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           StreamBuilder<List<Event>>(
             stream: _eventService.getEventsByDateStream(_dateKey),
             builder: (context, snapshot) {
@@ -154,13 +155,13 @@ class _EventsScreenState extends State<EventsScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.nightlife, color: kDim, size: 52),
-            const SizedBox(height: 16),
+            Icon(Icons.nightlife, color: kDim, size: 56),
+            const SizedBox(height: 18),
             const Text(
               'Nothing on tonight.',
-              style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w600),
+              style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w800),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             const Text('Try a different date.', style: TextStyle(color: kDim, fontSize: 13)),
           ],
         ),
@@ -168,7 +169,7 @@ class _EventsScreenState extends State<EventsScreen> {
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
       itemCount: snapshot.data!.length,
       itemBuilder: (context, index) => _eventCard(snapshot.data![index]),
     );
@@ -180,85 +181,71 @@ class _EventsScreenState extends State<EventsScreen> {
         MaterialPageRoute(builder: (_) => EventDetailScreen(event: event)),
       ),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        clipBehavior: Clip.antiAlias,
+        margin: const EdgeInsets.only(bottom: 14),
+        padding: const EdgeInsets.fromLTRB(18, 16, 16, 16),
         decoration: BoxDecoration(
           color: kSurface,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: kBorder),
         ),
-        child: Stack(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Positioned(
-              left: 0,
-              top: 0,
-              bottom: 0,
-              width: 3,
-              child: Container(color: kAccent),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(17, 14, 14, 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          event.name,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            height: 1.2,
-                          ),
-                        ),
-                      ),
-                      if (event.hasGuestlist) ...[
-                        const SizedBox(width: 8),
-                        _guestlistBadge(),
-                      ],
-                    ],
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    event.name,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 19,
+                      fontWeight: FontWeight.w800,
+                      height: 1.15,
+                    ),
                   ),
-                  const SizedBox(height: 3),
-                  Text(event.venue, style: const TextStyle(color: kMuted, fontSize: 12)),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      const Icon(Icons.music_note, color: kAccent, size: 13),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          event.dj,
-                          style: const TextStyle(color: Colors.white, fontSize: 13),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      _dot(),
-                      const Icon(Icons.access_time, color: kAccent, size: 13),
-                      const SizedBox(width: 3),
-                      Text(event.time, style: const TextStyle(color: Colors.white, fontSize: 13)),
-                      _dot(),
-                      Text(event.price, style: const TextStyle(color: Colors.white, fontSize: 13)),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: event.genres.map(_genreTag).toList(),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      _crowdBadge(event.crowdLevel),
-                    ],
-                  ),
+                ),
+                if (event.hasGuestlist) ...[
+                  const SizedBox(width: 8),
+                  _guestlistBadge(),
                 ],
-              ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(event.venue, style: const TextStyle(color: kMuted, fontSize: 13, fontWeight: FontWeight.w500)),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Icon(Icons.music_note, color: kAccent, size: 14),
+                const SizedBox(width: 5),
+                Expanded(
+                  child: Text(
+                    event.dj,
+                    style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                _dot(),
+                const Icon(Icons.access_time, color: kAccent, size: 14),
+                const SizedBox(width: 4),
+                Text(event.time, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                _dot(),
+                Text(event.price, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: event.genres.map(_genreTag).toList(),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _crowdBadge(event.crowdLevel),
+              ],
             ),
           ],
         ),
@@ -267,23 +254,23 @@ class _EventsScreenState extends State<EventsScreen> {
   }
 
   Widget _dot() => const Padding(
-    padding: EdgeInsets.symmetric(horizontal: 5),
+    padding: EdgeInsets.symmetric(horizontal: 6),
     child: Text('·', style: TextStyle(color: kDim, fontSize: 14)),
   );
 
   Widget _guestlistBadge() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: kAccent),
+        color: kAccent,
+        borderRadius: BorderRadius.circular(8),
       ),
       child: const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.bolt, color: kAccent, size: 12),
+          Icon(Icons.bolt, color: Colors.white, size: 12),
           SizedBox(width: 2),
-          Text('GL', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+          Text('GL', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
         ],
       ),
     );
@@ -296,18 +283,19 @@ class _EventsScreenState extends State<EventsScreen> {
             ? const Color(0xFFE0C040)
             : const Color(0xFF4CAF50);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.7)),
+        color: color.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.6)),
       ),
       child: Text(
         level.toUpperCase(),
         style: TextStyle(
           color: color,
           fontSize: 10,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.5,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.6,
         ),
       ),
     );
@@ -315,12 +303,12 @@ class _EventsScreenState extends State<EventsScreen> {
 
   Widget _genreTag(String genre) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        color: const Color(0x22B14EFF),
-        borderRadius: BorderRadius.circular(5),
+        color: kAccent.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(8),
       ),
-      child: Text(genre, style: const TextStyle(color: kMuted, fontSize: 11)),
+      child: Text(genre, style: const TextStyle(color: kMuted, fontSize: 11, fontWeight: FontWeight.w600)),
     );
   }
 }

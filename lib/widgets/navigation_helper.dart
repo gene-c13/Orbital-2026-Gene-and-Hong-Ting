@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'events_screen.dart';
-import 'social_screen.dart';
-import 'profile_screen.dart';
+import 'package:after_hours/screens/events/events_screen.dart';
+import 'package:after_hours/screens/social/social_screen.dart';
+import 'package:after_hours/screens/profile/profile_screen.dart';
 
 void goToTab(BuildContext context, int targetIndex) {
   if (targetIndex == 2) {
