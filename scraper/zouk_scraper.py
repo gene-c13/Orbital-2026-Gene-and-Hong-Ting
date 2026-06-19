@@ -4,6 +4,42 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
+import anthropic
+import json
+import firebase_admin
+from firebase_admin import credentials, firestore
+
+ANTHROPIC_API_KEY = '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'
+
+def extract_dj_with_claude(description):
+    # use claude to extract just the DJ name(s) from the description text
+    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+    prompt = f"""Extract the DJ or artist name(s) from this nightclub event description.
+
+Description: {description}
+
+Return only a JSON object with one field:
+- dj: DJ or artist name(s) only, comma separated (string). If no DJ is mentioned, return "".
+
+Example: {{"dj": "Ghetto, Krisha"}}
+
+Return only valid JSON, no explanation."""
+
+    message = client.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=100,
+        messages=[{"role": "user", "content": prompt}]
+    )
+
+    response_text = message.content[0].text.strip()
+    response_text = response_text.replace('```json', '').replace('```', '').strip()
+
+    try:
+        parsed = json.loads(response_text)
+        return parsed.get("dj", "")
+    except:
+        return ""
+
 
 
 def get_driver():
@@ -16,10 +52,11 @@ def get_driver():
         options=options
     )
     return driver
+#driver is the selenium controlled chrome browser. 
 
 
 def get_event_links(driver):
-    driver.get("https://zoukgroup.com/singapore/events/")
+    driver.get("https://zoukgroup.com/singapore/events/") #driver is an object, thus it has .get method
     time.sleep(5)
 
     soup = BeautifulSoup(driver.page_source, "html.parser")
@@ -70,7 +107,7 @@ def get_event_links(driver):
 
 def scrape_event_detail(driver, event_url):
     driver.get(event_url)
-    time.sleep(3)
+    time.sleep(8)
 
     soup = BeautifulSoup(driver.page_source, "html.parser")
 
@@ -86,15 +123,29 @@ def scrape_event_detail(driver, event_url):
 
     desc_tag = soup.find("meta", {"name": "description"})
     description = desc_tag.get("content", "").strip() if desc_tag else ""
+    print(f"  Description: {description}")
+
+    dj = extract_dj_with_claude(description)
 
     img_tag = soup.find("meta", {"name": "twitter:image"})
     image_url = img_tag.get("content", "") if img_tag else ""
+
+    price_tags = soup.find_all("span", class_="uwsprice")
+    prices = []
+    for tag in price_tags:
+        text = tag.get_text(strip=True)
+        match = re.search(r'\d+\.?\d*', text)
+        if match:
+            prices.append(float(match.group()))
+    price = f"${int(min(prices))}" if prices else ""
 
     return {
         "name": name,
         "date": date,
         "description": description,
         "image_url": image_url,
+        "dj":dj,
+        "price": price,
     }
 
 
@@ -120,9 +171,9 @@ def scrape_all_events():
                 "description": detail["description"],
                 "image_url": detail["image_url"],
                 "booking_url": event["url"],
-                "dj": "",
+                "dj": detail["dj"],
                 "time": "10:00 PM",
-                "price": "",
+                "price": detail["price"],
                 "crowd_level": "Medium",
                 "genres": [],
                 "has_guestlist": False,
@@ -137,14 +188,6 @@ def scrape_all_events():
     return results
 
 
-if __name__ == "__main__":
-    events = scrape_all_events()
-    for e in events:
-        print(e)
-
-import firebase_admin
-from firebase_admin import credentials, firestore
-
 def write_to_firestore(events):
     cred = credentials.Certificate("scraper/serviceAccountKey.json")
     firebase_admin.initialize_app(cred)
@@ -155,6 +198,9 @@ def write_to_firestore(events):
         db.collection("events").document(doc_id).set(event)
         print(f"Written: {event['name']} on {event['date']}")
 
+
 if __name__ == "__main__":
     events = scrape_all_events()
+    for e in events:
+        print(e)
     write_to_firestore(events)

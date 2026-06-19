@@ -9,9 +9,9 @@ class EventDetailScreen extends StatelessWidget {
 
   const EventDetailScreen({super.key, required this.event});
 
-  Future<void> _launchTicketUrl(BuildContext context) async {
-    if (event.ticketUrl.isEmpty) return;
-    final uri = Uri.parse(event.ticketUrl);
+  Future<void> _launchBookingUrl(BuildContext context) async {
+    if (event.bookingUrl.isEmpty) return;
+    final uri = Uri.parse(event.bookingUrl);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -118,58 +118,74 @@ class EventDetailScreen extends StatelessWidget {
   Widget _heroCard() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: kSurface,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: kBorder),
       ),
-      child: Stack(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Positioned(left: 0, top: 0, bottom: 0, width: 3, child: Container(color: kAccent)),
+          // show event image at the top if imageUrl is not empty
+          if (event.imageUrl.isNotEmpty)
+            Image.network(
+              'https://images.weserv.nl/?url=${Uri.encodeComponent(event.imageUrl)}',
+              width: double.infinity,
+              height: 200,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+            ),
           Padding(
-            padding: const EdgeInsets.only(left: 14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            padding: const EdgeInsets.all(18),
+            child: Stack(
               children: [
-                if (event.hasGuestlist)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: kAccent),
+                Positioned(left: 0, top: 0, bottom: 0, width: 3, child: Container(color: kAccent)),
+                Padding(
+                  padding: const EdgeInsets.only(left: 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (event.hasGuestlist)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: kAccent),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.bolt, color: kAccent, size: 13),
+                                SizedBox(width: 3),
+                                Text('Guestlist available', style: TextStyle(color: Colors.white, fontSize: 12)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      Text(
+                        event.name,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          height: 1.2,
+                        ),
                       ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
+                      const SizedBox(height: 6),
+                      Row(
                         children: [
-                          Icon(Icons.bolt, color: kAccent, size: 13),
-                          SizedBox(width: 3),
-                          Text('Guestlist available', style: TextStyle(color: Colors.white, fontSize: 12)),
+                          const Icon(Icons.location_on, color: kAccent, size: 14),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(event.venue, style: const TextStyle(color: kMuted, fontSize: 14)),
+                          ),
                         ],
                       ),
-                    ),
+                    ],
                   ),
-                Text(
-                  event.name,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    height: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    const Icon(Icons.location_on, color: kAccent, size: 14),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(event.venue, style: const TextStyle(color: kMuted, fontSize: 14)),
-                    ),
-                  ],
                 ),
               ],
             ),
@@ -307,14 +323,14 @@ class EventDetailScreen extends StatelessWidget {
   }
 
   Widget _buyButton(BuildContext context) {
-    final bool hasLink = event.ticketUrl.isNotEmpty;
+    final bool hasLink = event.bookingUrl.isNotEmpty;
     return SizedBox(
       width: double.infinity,
       height: 54,
       child: Container(
         decoration: hasLink ? kPrimaryButtonDecoration : null,
         child: ElevatedButton.icon(
-          onPressed: hasLink ? () => _launchTicketUrl(context) : null,
+          onPressed: hasLink ? () => _launchBookingUrl(context) : null,
           icon: const Icon(Icons.confirmation_number_outlined, size: 18),
           label: Text(hasLink ? 'Buy Tickets' : 'Tickets — check at door'),
           style: ElevatedButton.styleFrom(

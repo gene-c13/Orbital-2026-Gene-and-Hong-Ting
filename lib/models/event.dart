@@ -10,8 +10,9 @@ class Event {
   final List<String> genres;
   final bool hasGuestlist;
   final String date;
-  final String ticketUrl;
+  final String bookingUrl;
   final String description;
+  final String imageUrl;
 
   const Event({
     required this.name,
@@ -24,9 +25,10 @@ class Event {
     this.hasGuestlist = false,
     this.id = '',
     this.date = '',
-    this.ticketUrl = '',
+    this.bookingUrl = '',
     this.artistBio = '',
     this.description = '',
+    this.imageUrl = '',
   });
 
   factory Event.fromFirestore(Map<String, dynamic> data, String documentId) {
@@ -41,9 +43,10 @@ class Event {
       hasGuestlist: data['has_guestlist'] ?? false,
       genres:       List<String>.from(data['genres'] ?? []),
       date:         data['date']         ?? '',
-      ticketUrl:    data['ticket_url']   ?? '',
+      bookingUrl:    data['booking_url']   ?? '',
       artistBio:    data['artist_bio']   ?? '',
       description:  data['description']  ?? '',
+      imageUrl: data['image_url'] ?? '',
     );
   }
 }
