@@ -6,6 +6,7 @@ import 'package:shimmer/shimmer.dart';
 import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/screens/social/create_post_screen.dart';
 import 'package:after_hours/widgets/navigation_helper.dart';
+import 'package:after_hours/screens/social/comments_sheet.dart';
 
 class SocialScreen extends StatelessWidget {
   const SocialScreen({super.key});
@@ -294,8 +295,11 @@ class _PostCardState extends State<_PostCard> {
                   style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
                 ),
                 TextButton.icon(
-                  onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Comments coming soon!')),
+                  onPressed: () => showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (_) => CommentsSheet(postId: widget.postId),
                   ),
                   icon: const Icon(Icons.chat_bubble_outline, color: kDim, size: 18),
                   label: Text(
