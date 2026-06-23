@@ -54,4 +54,4 @@ serviceAccountKey.json
 
 after_hours.session
 
-scraper/after_hours.session
+scraper/after_hours.session.firebase/

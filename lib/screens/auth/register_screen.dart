@@ -15,6 +15,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController    = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmController  = TextEditingController();
+  final _usernameController = TextEditingController();
 
   bool _showPassword = false;
   bool _showConfirm  = false;
@@ -25,6 +26,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmController.dispose();
+    _usernameController.dispose();
     super.dispose();
   }
 
@@ -32,6 +34,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool get _hasUppercase  => _passwordController.text.contains(RegExp(r'[A-Z]'));
   bool get _hasNumber     => _passwordController.text.contains(RegExp(r'[0-9]'));
   bool get _hasSpecial    => _passwordController.text.contains(RegExp(r'[!@#\$%^&*(),.?":{}|<>_\-]'));
+  bool get _validUsername => RegExp(r'^[a-zA-Z0-9_]{3,20}$').hasMatch(_usernameController.text.trim());
 
   int get _strength {
     final p = _passwordController.text;
@@ -64,8 +67,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final email    = _emailController.text.trim();
     final password = _passwordController.text;
     final confirm  = _confirmController.text;
+    final username = _usernameController.text.trim().toLowerCase();
 
-    if (email.isEmpty || password.isEmpty) { _snack('Please fill in all fields.'); return; }
+    if (email.isEmpty || password.isEmpty || username.isEmpty) { _snack('Please fill in all fields.'); return; }
+    if (username.isEmpty || email.isEmpty || password.isEmpty) { _snack('Please fill in all fields.'); return; }
+    if (!_validUsername) { _snack('Username must be 3–20 chars, letters/numbers/underscores only.'); return; }
     if (!_hasMinLength) { _snack('Password must be at least 8 characters.'); return; }
     if (!_hasUppercase) { _snack('Password needs at least one uppercase letter.'); return; }
     if (!_hasNumber)    { _snack('Password needs at least one number.'); return; }
@@ -75,6 +81,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _submitting = true);
 
     try {
+      final usernameDoc = await FirebaseFirestore.instance
+            .collection('usernames')
+            .doc(username)
+            .get();
+      
+      if (usernameDoc.exists){
+        _snack('That username is already taken.');
+        setState(() => _submitting = false);
+        return;
+      }
+
       final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: email,
         password: password,
@@ -83,6 +100,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       if (user != null) {
         await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'username': username,
           'hours_this_month':  0,
           'events_this_month': 0,
           'puke_count':        0,
@@ -91,6 +109,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'favourite_genre':   '',
           'clubs_visited':     [],
         });
+        
+        await FirebaseFirestore.instance.collection('usernames').doc(username).set({
+          'uid' : user.uid,
+        });
+
         await user.sendEmailVerification();
       }
 
@@ -145,6 +168,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    _label('Username'),
+                    const SizedBox(height: 8),
+                    _textField(
+                      controller: _usernameController,
+                      hint: 'e.g. hongting_99',
+                      action: TextInputAction.next,
+                      onChanged: (_) => setState(() {}),
+                    ),
+                    const SizedBox(height: 6),
+                    if (_usernameController.text.isNotEmpty)
+                      _req('3–20 characters, letters/numbers/underscores only', _validUsername),
+                    const SizedBox(height: 16),
+
                     _label('Email'),
                     const SizedBox(height: 8),
                     _textField(
