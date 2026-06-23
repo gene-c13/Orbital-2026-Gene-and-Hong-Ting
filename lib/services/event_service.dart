@@ -6,13 +6,6 @@ class EventService {
 
   CollectionReference get _eventsCollection => _firestore.collection('events');
 
-  Stream<List<Event>> getEventsStream() {
-    return _eventsCollection
-        .orderBy('time')
-        .snapshots()
-        .map((snap) => snap.docs.map((d) => Event.fromFirestore(d.data() as Map<String, dynamic>, d.id)).toList());
-  }
-
   Stream<List<Event>> getEventsByDateStream(String date) {
     return _eventsCollection
         .where('date', isEqualTo: date)

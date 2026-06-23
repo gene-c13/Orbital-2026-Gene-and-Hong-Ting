@@ -9,17 +9,22 @@ class EventDetailScreen extends StatelessWidget {
 
   const EventDetailScreen({super.key, required this.event});
 
-  Future<void> _launchBookingUrl(BuildContext context) async {
-    if (event.bookingUrl.isEmpty) return;
-    final uri = Uri.parse(event.bookingUrl);
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open ticket link.')),
-        );
-      }
-    }
+Future<void> _launchBookingUrl(BuildContext context) async {
+  if (event.bookingUrl.isEmpty) return;
+  final uri = Uri.parse(event.bookingUrl);
+
+  final bool launched = await launchUrl(
+    uri,
+    mode: LaunchMode.platformDefault,
+    webOnlyWindowName: '_blank',
+  );
+
+  if (!launched && context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Could not open ticket link.')),
+    );
   }
+}
 
   @override
   Widget build(BuildContext context) {

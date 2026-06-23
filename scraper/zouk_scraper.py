@@ -61,17 +61,8 @@ def get_event_links(driver):
 
     soup = BeautifulSoup(driver.page_source, "html.parser")
 
-    all_links = soup.find_all("a")
-    print(f"Total <a> tags found: {len(all_links)}")
-    for link in all_links[:15]:
-        print(link.get("href"))
-
     event_links = soup.find_all("a", href=re.compile(r"/event/"))
-    print(f"\nEvent links found: {len(event_links)}")
-    for link in event_links[:5]:
-        print("href:", link.get("href"))
-        print("text:", link.get_text(separator=" ", strip=True))
-        print("---")
+    print(f"Event links found: {len(event_links)}")
 
     events = []
     seen = set()
