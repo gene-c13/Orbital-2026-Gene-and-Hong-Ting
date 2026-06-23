@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:after_hours/services/friend_service.dart';
 import 'package:after_hours/theme/app_theme.dart';
 
@@ -13,33 +14,51 @@ class UserSearchScreen extends StatefulWidget {
 class _UserSearchScreenState extends State<UserSearchScreen> {
   final _controller = TextEditingController();
   final _friendService = FriendService();
+  final _currentUid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
+  List<Map<String, dynamic>> _results = [];
   bool _loading = false;
-  bool _searched = false;
-  Map<String, dynamic>? _result;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_onChanged);
+  }
 
   @override
   void dispose() {
+    _controller.removeListener(_onChanged);
     _controller.dispose();
     super.dispose();
   }
 
-  Future<void> _search() async {
-    final query = _controller.text.trim();
-    if (query.isEmpty) return;
+  void _onChanged() {
+    final query = _controller.text.trim().toLowerCase();
+    if (query.isEmpty) {
+      setState(() => _results = []);
+      return;
+    }
+    _search(query);
+  }
+
+  Future<void> _search(String query) async {
+    setState(() => _loading = true);
+
+    final snapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .where('username', isGreaterThanOrEqualTo: query)
+        .where('username', isLessThanOrEqualTo: '$query\uf8ff')
+        .limit(8)
+        .get();
+
+    final results = snapshot.docs
+        .map((doc) => {'uid': doc.id, ...doc.data()})
+        .where((user) => user['uid'] != _currentUid)
+        .toList();
 
     setState(() {
-      _loading = true;
-      _searched = false;
-      _result = null;
-    });
-
-    final result = await _friendService.searchByUsername(query);
-
-    setState(() {
+      _results = results;
       _loading = false;
-      _searched = true;
-      _result = result;
     });
   }
 
@@ -65,8 +84,6 @@ class _UserSearchScreenState extends State<UserSearchScreen> {
                       child: TextField(
                         controller: _controller,
                         autofocus: true,
-                        textInputAction: TextInputAction.search,
-                        onSubmitted: (_) => _search(),
                         style: const TextStyle(color: Colors.white),
                         cursorColor: Colors.white,
                         decoration: InputDecoration(
@@ -82,90 +99,131 @@ class _UserSearchScreenState extends State<UserSearchScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    GestureDetector(
-                      onTap: _search,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: kAccent,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Text(
-                          'Search',
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               ),
               const SizedBox(height: 8),
               const Divider(height: 1, thickness: 1, color: kBorder),
-              Expanded(
-                child: _buildBody(),
-              ),
+              if (_loading)
+                const Padding(
+                  padding: EdgeInsets.only(top: 24),
+                  child: CircularProgressIndicator(color: kAccent, strokeWidth: 2),
+                )
+              else if (_controller.text.isEmpty)
+                const Expanded(
+                  child: Center(
+                    child: Text('Search for a user by username.', style: TextStyle(color: kDim)),
+                  ),
+                )
+              else if (_results.isEmpty)
+                const Expanded(
+                  child: Center(
+                    child: Text('No users found.', style: TextStyle(color: kMuted)),
+                  ),
+                )
+              else
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    itemCount: _results.length,
+                    itemBuilder: (context, index) {
+                      final user = _results[index];
+                      final uid = user['uid'] as String;
+                      final username = user['username'] as String? ?? 'Unknown';
+
+                      return _UserResultTile(
+                        uid: uid,
+                        username: username,
+                        currentUid: _currentUid,
+                        friendService: _friendService,
+                      );
+                    },
+                  ),
+                ),
             ],
           ),
         ),
       ),
     );
   }
+}
 
-  Widget _buildBody() {
-    if (_loading) {
-      return const Center(child: CircularProgressIndicator(color: kAccent, strokeWidth: 2));
-    }
+class _UserResultTile extends StatefulWidget {
+  final String uid;
+  final String username;
+  final String currentUid;
+  final FriendService friendService;
 
-    if (!_searched) {
-      return const Center(
-        child: Text('Search for a user by username.', style: TextStyle(color: kDim)),
-      );
-    }
+  const _UserResultTile({
+    required this.uid,
+    required this.username,
+    required this.currentUid,
+    required this.friendService,
+  });
 
-    if (_result == null) {
-      return const Center(
-        child: Text('No user found.', style: TextStyle(color: kMuted)),
-      );
-    }
+  @override
+  State<_UserResultTile> createState() => _UserResultTileState();
+}
 
-    final currentUid = FirebaseAuth.instance.currentUser?.uid;
-    final resultUid = _result!['uid'] as String?;
-    final username = _result!['username'] as String? ?? 'Unknown';
+class _UserResultTileState extends State<_UserResultTile> {
+  bool _requestSent = false;
 
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: kSurface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: kBorder),
-        ),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 24,
-              backgroundColor: kAccent.withValues(alpha: 0.3),
-              child: Text(
-                username[0].toUpperCase(),
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18),
-              ),
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: kSurface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: kBorder),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: kAccent.withValues(alpha: 0.3),
+            child: Text(
+              widget.username[0].toUpperCase(),
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Text(
-                username,
-                style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
-              ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              widget.username,
+              style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700),
             ),
-            if (resultUid != null && resultUid != currentUid)
-              TextButton(
-                onPressed: () {},
-                child: const Text('Add friend', style: TextStyle(color: kAccent, fontWeight: FontWeight.w700)),
-              ),
-          ],
-        ),
+          ),
+          FutureBuilder<List<bool>>(
+            future: Future.wait([
+              widget.friendService.isFriend(widget.currentUid, widget.uid),
+              widget.friendService.hasPendingRequest(widget.currentUid, widget.uid),
+            ]),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) return const SizedBox.shrink();
+
+              final alreadyFriend = snapshot.data![0];
+              final pending = snapshot.data![1] || _requestSent;
+
+              if (alreadyFriend) {
+                return const Text('Friends', style: TextStyle(color: kMuted, fontWeight: FontWeight.w600));
+              }
+
+              if (pending) {
+                return const Text('Sent', style: TextStyle(color: kMuted, fontWeight: FontWeight.w600));
+              }
+
+              return TextButton(
+                onPressed: () async {
+                  await widget.friendService.sendFriendRequest(widget.currentUid, widget.uid);
+                  setState(() => _requestSent = true);
+                },
+                child: const Text('Add', style: TextStyle(color: kAccent, fontWeight: FontWeight.w700)),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
