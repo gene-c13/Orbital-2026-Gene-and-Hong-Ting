@@ -168,8 +168,9 @@ class _PostCardState extends State<_PostCard> {
   @override
   Widget build(BuildContext context) {
     final data         = widget.data;
-    final username     = data['username'] as String? ?? 'Raver';
-    final caption      = data['caption']  as String? ?? '';
+    final displayName  = data['display_name'] as String? ?? 'Raver';
+    final username     = data['username'] as String? ?? '';
+    final caption      = data['caption'] as String? ?? '';
     final venueTag     = (data['venue_tag'] as String?)?.trim() ?? '';
     final eventTag     = (data['event_tag'] as String?)?.trim() ?? '';
     final rating       = (data['rating'] as num?)?.toDouble();
@@ -199,7 +200,7 @@ class _PostCardState extends State<_PostCard> {
                   radius: 20,
                   backgroundColor: kAccent.withValues(alpha: 0.3),
                   child: Text(
-                    username[0].toUpperCase(),
+                    displayName[0].toUpperCase(),
                     style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16),
                   ),
                 ),
@@ -208,7 +209,9 @@ class _PostCardState extends State<_PostCard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(username, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
+                      Text(displayName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
+                      if (username.isNotEmpty)
+                        Text('@$username', style: const TextStyle(color: kMuted, fontSize: 12, fontWeight: FontWeight.w500)),
                       Text(_timeAgo(ts), style: const TextStyle(color: kDim, fontSize: 11)),
                     ],
                   ),

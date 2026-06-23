@@ -206,14 +206,17 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     setState(() => _submitting = true);
 
     try {
-      final user     = FirebaseAuth.instance.currentUser!;
-      final username = user.displayName ?? user.email?.split('@').first ?? 'Raver';
-      final venue    = _venueController.text.trim();
+      final user        = FirebaseAuth.instance.currentUser!;
+      final displayName = user.displayName ?? user.email?.split('@').first ?? 'Raver';
+      final userDoc     = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final username    = userDoc.data()?['username'] as String? ?? '';
+      final venue       = _venueController.text.trim();
       final hours    = _hoursOut();
       final imageUrl = _imageFile != null ? await _uploadImage(user.uid) : '';
 
       await FirebaseFirestore.instance.collection('posts').add({
         'uid':           user.uid,
+        'display_name':  displayName,
         'username':      username,
         'caption':       caption,
         'venue_tag':     venue,

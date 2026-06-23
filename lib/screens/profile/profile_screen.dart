@@ -58,6 +58,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       backgroundColor: Colors.transparent,
       builder: (_) => _EditProfileSheet(
         initialName:     displayName,
+        username:        _userData['username'] as String? ?? '',
         initialVenue:    venue    ?? '',
         initialGenre:    (genre?.isEmpty    ?? true) ? null : genre,
         initialPhotoUrl: (photoUrl?.isEmpty ?? true) ? null : photoUrl,
@@ -264,8 +265,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 3),
               Text(
-                FirebaseAuth.instance.currentUser?.email ?? '',
-                style: const TextStyle(color: kDim, fontSize: 12),
+                _userData['username'] != null ? '@${_userData['username']}' : '',
+                style: const TextStyle(color: kMuted, fontSize: 13, fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -369,6 +370,7 @@ extension<T> on List<T> {
 
 class _EditProfileSheet extends StatefulWidget {
   final String  initialName;
+  final String  username;
   final String  initialVenue;
   final String? initialGenre;
   final String? initialPhotoUrl;
@@ -377,6 +379,7 @@ class _EditProfileSheet extends StatefulWidget {
 
   const _EditProfileSheet({
     required this.initialName,
+    required this.username,
     required this.initialVenue,
     required this.initialGenre,
     required this.initialPhotoUrl,
@@ -658,7 +661,33 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                     ),
                     const SizedBox(height: 32),
 
-                    _fieldLabel('USERNAME *'),
+                    _fieldLabel('USERNAME'),
+                    const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 17),
+                      decoration: BoxDecoration(
+                        color: kSurface,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: kBorder),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.alternate_email, color: kDim, size: 20),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text('@${widget.username}',
+                                style: const TextStyle(color: kDim, fontSize: 16)),
+                          ),
+                          const Icon(Icons.lock_outline, color: kDim, size: 16),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text("Username can't be changed",
+                        style: TextStyle(color: kDim, fontSize: 11)),
+                    const SizedBox(height: 22),
+                    _fieldLabel('DISPLAY NAME *'),
                     const SizedBox(height: 8),
                     _inputField(
                       controller:     _nameController,
