@@ -45,6 +45,12 @@ class _CommentsSheetState extends State<CommentsSheet> {
       });
       await postRef.update({'comment_count': FieldValue.increment(1)});
       _controller.clear();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Comment error: $e')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -61,15 +67,17 @@ class _CommentsSheetState extends State<CommentsSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final media = MediaQuery.of(context);
+    final sheetHeight = media.size.height * 0.7 - media.viewInsets.bottom;
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Container(
+        height: sheetHeight,
         decoration: const BoxDecoration(
           color: Color(0xFF130228),
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
               margin: const EdgeInsets.only(top: 10, bottom: 6),
@@ -86,7 +94,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
                   style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w800)),
             ),
             const Divider(height: 1, color: kBorder),
-            Flexible(
+            Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: _comments.orderBy('created_at').snapshots(),
                 builder: (context, snapshot) {
@@ -107,7 +115,6 @@ class _CommentsSheetState extends State<CommentsSheet> {
                     );
                   }
                   return ListView.builder(
-                    shrinkWrap: true,
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     itemCount: docs.length,
                     itemBuilder: (context, i) =>
