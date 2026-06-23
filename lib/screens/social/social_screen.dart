@@ -6,6 +6,7 @@ import 'package:shimmer/shimmer.dart';
 import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/screens/social/create_post_screen.dart';
 import 'package:after_hours/widgets/navigation_helper.dart';
+import 'package:after_hours/screens/social/user_search_screen.dart';
 
 class SocialScreen extends StatelessWidget {
   const SocialScreen({super.key});
@@ -30,7 +31,14 @@ class SocialScreen extends StatelessWidget {
                       'SOCIAL',
                       style: kNectarine(size: 32, letterSpacing: 3),
                     ),
-                    const Spacer(),
+                   const Spacer(),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const UserSearchScreen()),
+                      ),
+                      icon: const Icon(Icons.search, color: Colors.white, size: 22),
+                    ),
+                    const SizedBox(width: 4),
                     GestureDetector(
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(builder: (_) => const CreatePostScreen()),

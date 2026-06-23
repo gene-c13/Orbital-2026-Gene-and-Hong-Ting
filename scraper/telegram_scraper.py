@@ -1,6 +1,5 @@
 import asyncio
 import json
-import re
 from datetime import datetime, timezone, timedelta
 from telethon import TelegramClient
 import anthropic
@@ -94,7 +93,7 @@ def normalise_venue(venue_str):
 
 def write_event_to_firestore(db, event, source_channel):
     if not event.get('name') or not event.get('date'):
-        return
+        returnfirebase deploy --only hosting
 
     if isinstance(event.get('dj'), list):
         event['dj'] = ', '.join(event['dj'])
