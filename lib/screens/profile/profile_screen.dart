@@ -8,6 +8,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/screens/auth/login_screen.dart';
 import 'package:after_hours/widgets/navigation_helper.dart';
+import 'package:after_hours/services/friend_service.dart';
 
 const _genres = [
   'House', 'Techno', 'Drum & Bass', 'Hip-Hop', 'R&B',
@@ -118,6 +119,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            _friendRequestsSection(user?.uid ?? ''),
                             _avatarCard(displayName),
                             const SizedBox(height: 24),
 
@@ -150,6 +152,83 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _friendRequestsSection(String currentUid) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FriendService().incomingRequests(currentUid),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        final requests = snapshot.data!.docs;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 4),
+            _sectionLabel('Friend requests'),
+            const SizedBox(height: 10),
+            ...requests.map((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              final fromUid = data['from_uid'] as String;
+
+              return FutureBuilder<DocumentSnapshot>(
+                future: FirebaseFirestore.instance.collection('users').doc(fromUid).get(),
+                builder: (context, userSnap) {
+                  if (!userSnap.hasData) return const SizedBox.shrink();
+                  final userData = userSnap.data!.data() as Map<String, dynamic>? ?? {};
+                  final username = userData['username'] as String? ?? 'Unknown';
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: kSurface,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: kBorder),
+                    ),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 20,
+                          backgroundColor: kAccent.withValues(alpha: 0.3),
+                          child: Text(
+                            username[0].toUpperCase(),
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            username,
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () async {
+                            await FriendService().rejectRequest(doc.id);
+                          },
+                          child: const Text('Decline', style: TextStyle(color: kMuted)),
+                        ),
+                        TextButton(
+                          onPressed: () async {
+                            await FriendService().acceptRequest(doc.id, fromUid, currentUid);
+                          },
+                          child: const Text('Accept', style: TextStyle(color: kAccent, fontWeight: FontWeight.w700)),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            }),
+            const SizedBox(height: 14),
+          ],
+        );
+      },
     );
   }
 
@@ -533,7 +612,6 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                   padding: const EdgeInsets.fromLTRB(20, 28, 20, 36),
                   children: [
 
-                    // ── Avatar picker ──────────────────────────────────────
                     Center(
                       child: GestureDetector(
                         onTap: _pickAvatar,
@@ -580,7 +658,6 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                     ),
                     const SizedBox(height: 32),
 
-                    // ── Username ───────────────────────────────────────────
                     _fieldLabel('USERNAME *'),
                     const SizedBox(height: 8),
                     _inputField(
@@ -593,7 +670,6 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                     ),
                     const SizedBox(height: 22),
 
-                    // ── Favourite genre ────────────────────────────────────
                     _fieldLabel('FAVOURITE GENRE'),
                     const SizedBox(height: 8),
                     GestureDetector(
@@ -634,7 +710,6 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                     ),
                     const SizedBox(height: 22),
 
-                    // ── Favourite venue ────────────────────────────────────
                     _fieldLabel('FAVOURITE VENUE'),
                     const SizedBox(height: 8),
                     _inputField(
@@ -645,7 +720,6 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                     ),
                     const SizedBox(height: 40),
 
-                    // ── Save button ────────────────────────────────────────
                     SizedBox(
                       width: double.infinity,
                       height: 56,
