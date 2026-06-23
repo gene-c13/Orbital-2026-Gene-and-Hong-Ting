@@ -26,15 +26,9 @@ class SocialScreen extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    const Text(
+                    Text(
                       'SOCIAL',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 32,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 3,
-                        height: 1,
-                      ),
+                      style: kNectarine(size: 32, letterSpacing: 3),
                     ),
                     const Spacer(),
                     GestureDetector(

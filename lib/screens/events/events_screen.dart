@@ -17,6 +17,26 @@ class _EventsScreenState extends State<EventsScreen> {
   DateTime selectedDate = DateTime.now();
   final EventService _eventService = EventService();
 
+  bool _searching = false;
+  String _query = '';
+  final _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _toggleSearch() {
+    setState(() {
+      _searching = !_searching;
+      if (!_searching) {
+        _searchController.clear();
+        _query = '';
+      }
+    });
+  }
+
   String get _dateKey => DateFormat('yyyy-MM-dd').format(selectedDate);
 
   Future<void> _pickDate() async {
@@ -54,10 +74,12 @@ class _EventsScreenState extends State<EventsScreen> {
               _buildHeader(),
               const Divider(height: 1, thickness: 1, color: kBorder),
               Expanded(
-                child: StreamBuilder<List<Event>>(
-                  stream: _eventService.getEventsByDateStream(_dateKey),
-                  builder: (context, snapshot) => _buildEventList(snapshot),
-                ),
+                child: _searching
+                    ? _buildSearchResults()
+                    : StreamBuilder<List<Event>>(
+                        stream: _eventService.getEventsByDateStream(_dateKey),
+                        builder: (context, snapshot) => _buildEventList(snapshot),
+                      ),
               ),
             ],
           ),
@@ -72,69 +94,112 @@ class _EventsScreenState extends State<EventsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'AFTER HOURS',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 30,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 2,
-              height: 1,
-            ),
-          ),
-          const SizedBox(height: 22),
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              GestureDetector(
-                onTap: () => _changeDay(-1),
-                child: const Padding(
-                  padding: EdgeInsets.only(right: 14),
-                  child: Icon(Icons.chevron_left, color: Colors.white, size: 30),
-                ),
-              ),
-              Expanded(
-                child: GestureDetector(
-                  onTap: _pickDate,
-                  child: Column(
-                    children: [
-                      Text(
-                        DateFormat('EEEE').format(selectedDate).toUpperCase(),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 19,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 3,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        DateFormat('d MMMM y').format(selectedDate),
-                        style: const TextStyle(color: kMuted, fontSize: 13, fontWeight: FontWeight.w500),
-                      ),
-                    ],
-                  ),
-                ),
+              Text(
+                'AFTER HOURS',
+                style: kNectarine(size: 34, letterSpacing: 2),
               ),
               GestureDetector(
-                onTap: () => _changeDay(1),
-                child: const Padding(
-                  padding: EdgeInsets.only(left: 14),
-                  child: Icon(Icons.chevron_right, color: Colors.white, size: 30),
+                onTap: _toggleSearch,
+                child: Icon(
+                  _searching ? Icons.close : Icons.search,
+                  color: Colors.white,
+                  size: 26,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          StreamBuilder<List<Event>>(
-            stream: _eventService.getEventsByDateStream(_dateKey),
-            builder: (context, snapshot) {
-              final count = snapshot.data?.length ?? 0;
-              if (count == 0) return const SizedBox.shrink();
-              return Text(
-                '$count ${count == 1 ? "event" : "events"} tonight',
-                style: const TextStyle(color: kDim, fontSize: 12, letterSpacing: 0.3),
-              );
-            },
+          const SizedBox(height: 22),
+          if (_searching)
+            _buildSearchField()
+          else ...[
+            Row(
+              children: [
+                GestureDetector(
+                  onTap: () => _changeDay(-1),
+                  child: const Padding(
+                    padding: EdgeInsets.only(right: 14),
+                    child: Icon(Icons.chevron_left, color: Colors.white, size: 30),
+                  ),
+                ),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: _pickDate,
+                    child: Column(
+                      children: [
+                        Text(
+                          DateFormat('EEEE').format(selectedDate).toUpperCase(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 19,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 3,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          DateFormat('d MMMM y').format(selectedDate),
+                          style: const TextStyle(color: kMuted, fontSize: 13, fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => _changeDay(1),
+                  child: const Padding(
+                    padding: EdgeInsets.only(left: 14),
+                    child: Icon(Icons.chevron_right, color: Colors.white, size: 30),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            StreamBuilder<List<Event>>(
+              stream: _eventService.getEventsByDateStream(_dateKey),
+              builder: (context, snapshot) {
+                final count = snapshot.data?.length ?? 0;
+                if (count == 0) return const SizedBox.shrink();
+                return Text(
+                  '$count ${count == 1 ? "event" : "events"} tonight',
+                  style: const TextStyle(color: kDim, fontSize: 12, letterSpacing: 0.3),
+                );
+              },
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchField() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      decoration: BoxDecoration(
+        color: kSurface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: kBorder),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.search, color: kAccent, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              autofocus: true,
+              style: const TextStyle(color: Colors.white, fontSize: 15),
+              cursorColor: kAccent,
+              decoration: const InputDecoration(
+                hintText: 'Search venue, DJ, or genre',
+                hintStyle: TextStyle(color: kDim, fontSize: 14),
+                border: InputBorder.none,
+                isDense: true,
+              ),
+              onChanged: (v) => setState(() => _query = v),
+            ),
           ),
         ],
       ),
@@ -309,6 +374,107 @@ class _EventsScreenState extends State<EventsScreen> {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(genre, style: const TextStyle(color: kMuted, fontSize: 11, fontWeight: FontWeight.w600)),
+    );
+  }
+
+  bool _matches(Event e, String q) {
+    final query = q.toLowerCase().trim();
+    return e.name.toLowerCase().contains(query)
+        || e.venue.toLowerCase().contains(query)
+        || e.dj.toLowerCase().contains(query)
+        || e.genres.any((g) => g.toLowerCase().contains(query));
+  }
+
+  Widget _buildSearchResults() {
+    if (_query.trim().isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.search, color: kDim, size: 56),
+            const SizedBox(height: 18),
+            const Text(
+              'Search every night.',
+              style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 8),
+            const Text('By venue, DJ, or genre.', style: TextStyle(color: kDim, fontSize: 13)),
+          ],
+        ),
+      );
+    }
+
+    return StreamBuilder<List<Event>>(
+      stream: _eventService.getAllEventsStream(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: kAccent, strokeWidth: 2));
+        }
+        if (snapshot.hasError) {
+          return const Center(child: Text('Something went wrong.', style: TextStyle(color: kMuted)));
+        }
+
+        final all = snapshot.data ?? [];
+        final results = all.where((e) => _matches(e, _query)).toList();
+
+        if (results.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.search_off, color: kDim, size: 56),
+                const SizedBox(height: 18),
+                Text(
+                  'No matches for "$_query".',
+                  style: const TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w800),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                const Text('Try a venue, DJ, or genre.', style: TextStyle(color: kDim, fontSize: 13)),
+              ],
+            ),
+          );
+        }
+
+        final groups = <String, List<Event>>{};
+        for (final e in results) {
+          groups.putIfAbsent(e.date, () => []).add(e);
+        }
+
+        final children = <Widget>[];
+        groups.forEach((date, events) {
+          children.add(_dateHeader(date));
+          children.addAll(events.map(_eventCard));
+        });
+
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+          children: children,
+        );
+      },
+    );
+  }
+
+  Widget _dateHeader(String date) {
+    final parsed = DateTime.tryParse(date);
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final isToday = date == today;
+    String label = date;
+    if (parsed != null) {
+      final formatted = DateFormat('EEE d MMM').format(parsed).toUpperCase();
+      label = isToday ? 'TONIGHT · $formatted' : formatted;
+    }
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 10),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: isToday ? kAccent : kMuted,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.5,
+        ),
+      ),
     );
   }
 }

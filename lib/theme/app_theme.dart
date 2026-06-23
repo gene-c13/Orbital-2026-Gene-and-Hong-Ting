@@ -11,6 +11,18 @@ const Color kPink    = Color(0xFFFF2D95);
 const Color kMuted   = Color(0xCCFFFFFF);
 const Color kDim     = Color(0x80FFFFFF);
 
+// ── Typography ────────────────────────────────────────────────────────────────
+const kFontNectarine = 'Nectarine';
+
+TextStyle kNectarine({double size = 32, Color color = Colors.white, double? letterSpacing}) {
+  return TextStyle(
+    fontFamily: kFontNectarine,
+    fontSize: size,
+    color: color,
+    letterSpacing: letterSpacing ?? size * 0.02,
+  );
+}
+
 // ── Backgrounds ───────────────────────────────────────────────────────────────
 const kBgDecoration = BoxDecoration(
   gradient: LinearGradient(

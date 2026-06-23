@@ -1,3 +1,9 @@
+# Claude Code
+.claude/
+skills-lock.json
+skills.json
+CLAUDE.md
+
 # Miscellaneous
 *.class
 *.log

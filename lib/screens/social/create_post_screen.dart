@@ -298,15 +298,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Log your night',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 30,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.5,
-                          height: 1.1,
-                        ),
+                        style: kNectarine(size: 30, letterSpacing: 0.5),
                       ),
                       const SizedBox(height: 6),
                       const Text(

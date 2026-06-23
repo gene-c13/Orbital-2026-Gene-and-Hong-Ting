@@ -26,6 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>After Hours needs camera access so you can attach a photo to your night log.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>After Hours needs photo library access so you can attach a photo to your night log.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

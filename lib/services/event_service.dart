@@ -18,4 +18,14 @@ class EventService {
     final snap = await _eventsCollection.where('date', isEqualTo: date).get();
     return snap.docs.length;
   }
+
+  Stream<List<Event>> getAllEventsStream() {
+    return _eventsCollection
+        .orderBy('date')
+        .orderBy('sort_order')
+        .snapshots()
+        .map((snap) => snap.docs
+            .map((d) => Event.fromFirestore(d.data() as Map<String, dynamic>, d.id))
+            .toList());
+  }
 }

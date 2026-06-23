@@ -69,17 +69,20 @@ class _LoginScreenState extends State<LoginScreen> {
         width: double.infinity,
         height: double.infinity,
         decoration: kBgDecorationAuth,
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Image.asset('assets/images/after_hours_logo.png', height: 260),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final logoHeight = (constraints.maxHeight * 0.55).clamp(140.0, 280.0);
+            return SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 48, 24, 32),
+              child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+              Image.asset('assets/images/after_hours_logo.png', height: logoHeight),
               const Text(
                 'LESS PLANNING. MORE PARTYING.',
                 style: TextStyle(fontSize: 13, color: Color(0xCCB14EFF), letterSpacing: 2),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
@@ -185,8 +188,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
-            ],
-          ),
+                    ],
+                  ),
+            );
+          },
         ),
       ),
     );
