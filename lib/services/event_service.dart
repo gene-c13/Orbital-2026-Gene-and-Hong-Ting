@@ -20,12 +20,16 @@ class EventService {
   }
 
   Stream<List<Event>> getAllEventsStream() {
-    return _eventsCollection
-        .orderBy('date')
-        .orderBy('sort_order')
-        .snapshots()
-        .map((snap) => snap.docs
-            .map((d) => Event.fromFirestore(d.data() as Map<String, dynamic>, d.id))
-            .toList());
+  final today = DateTime.now();
+  final todayKey = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+
+  return _eventsCollection
+      .where('date', isGreaterThanOrEqualTo: todayKey)
+      .orderBy('date')
+      .orderBy('sort_order')
+      .snapshots()
+      .map((snap) => snap.docs
+          .map((d) => Event.fromFirestore(d.data() as Map<String, dynamic>, d.id))
+          .toList());
   }
 }
