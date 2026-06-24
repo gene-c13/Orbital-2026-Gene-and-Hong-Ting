@@ -30,7 +30,7 @@ def init_firestore():
     return firestore.client()
 
 
-def extract_event_with_claude(message_text, channel_name):
+def extract_event_with_claude(message_text, channel_name, message_date):
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     prompt = f"""You are extracting nightclub event information from a Telegram message posted in Singapore.
 
@@ -44,7 +44,7 @@ If it is NOT an event announcement (e.g. post-event thanks, random chat, ticket 
 Fields to extract:
 - name: event name or night theme (string)
 - venue: club or venue name (string)
-- date: in YYYY-MM-DD format. Today is {datetime.now().strftime('%Y-%m-%d')}. Dates in messages are in DD.MM or DD.MM.YYYY format (e.g. "10.06" means June 10, not October 6). Use context clues like "tonight", "this Friday", "03.06" to determine the date. (string)- dj: DJ name(s) comma separated (string)
+- date: in YYYY-MM-DD format. This message was sent on {message_date}. Dates in messages are in DD.MM or DD.MM.YYYY format (e.g. "10.06" means June 10, not October 6). Use context clues like "tonight", "this Friday", "03.06" to determine the date. If no explicit date is mentioned, assume the event is on the same day the message was sent. (string)
 - genres: list of music genres mentioned (list of strings)
 - time: doors open time e.g. "10:00 PM" (string or null)
 - price: entry/ticket price only, ignore bottle or sofa package prices (string or null)"
@@ -93,7 +93,7 @@ def normalise_venue(venue_str):
 
 def write_event_to_firestore(db, event, source_channel):
     if not event.get('name') or not event.get('date'):
-        returnfirebase deploy --only hosting
+        return
 
     if isinstance(event.get('dj'), list):
         event['dj'] = ', '.join(event['dj'])
@@ -146,7 +146,8 @@ async def scrape_channels():
 
                     print(f"  Processing: {message.text[:60]}...")
 
-                    events = extract_event_with_claude(message.text, channel)
+                    message_date = message.date.astimezone(timezone(timedelta(hours=8))).strftime('%Y-%m-%d')
+                    events = extract_event_with_claude(message.text, channel, message_date)
                     if events:
                         for event in events:
                             write_event_to_firestore(db, event, channel)
