@@ -5,10 +5,14 @@ from telethon import TelegramClient
 import anthropic
 import firebase_admin
 from firebase_admin import credentials, firestore
+from dotenv import load_dotenv
+import os
 
-API_ID = '30661011'
-API_HASH = '5db6afb05920372ccbce80b8c34904ce'
-ANTHROPIC_API_KEY = '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'
+load_dotenv()
+
+API_ID = os.getenv('TELEGRAM_API_ID')
+API_HASH = os.getenv('TELEGRAM_API_HASH')
+ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
 
 CHANNELS = [
     '@makecherrygr8again',

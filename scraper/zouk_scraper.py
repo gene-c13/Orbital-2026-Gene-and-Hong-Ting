@@ -7,6 +7,7 @@ import anthropic
 import json
 import firebase_admin
 from firebase_admin import credentials, firestore
+import re
 
 ANTHROPIC_API_KEY = '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'
 
