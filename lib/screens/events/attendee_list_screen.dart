@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/models/user.dart';
 import 'package:after_hours/services/attendance_service.dart';
 import 'package:after_hours/services/user_service.dart';
+import 'package:after_hours/services/friend_service.dart';
+import 'package:after_hours/services/chat_service.dart';
+import 'package:after_hours/screens/chat/chat_screen.dart';
 import 'package:after_hours/widgets/user_avatar.dart';
 
-/// Full list of everyone attending an event. Tapping into individual
-/// profiles from here is deferred to a later feature.
 class AttendeeListScreen extends StatelessWidget {
   final String eventId;
   final String eventName;
@@ -19,6 +21,8 @@ class AttendeeListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final currentUid = FirebaseAuth.instance.currentUser?.uid ?? '';
+
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -80,38 +84,18 @@ class AttendeeListScreen extends StatelessWidget {
                           return const Center(child: CircularProgressIndicator(color: kAccent, strokeWidth: 2));
                         }
 
-                        final users = userSnap.data!;
+                        final users = userSnap.data!
+                            .where((u) => u.uid != currentUid)
+                            .toList();
+
                         return ListView.builder(
                           padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                           itemCount: users.length,
                           itemBuilder: (context, index) {
                             final user = users[index];
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 10),
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                color: kSurface,
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: kBorder),
-                              ),
-                              child: Row(
-                                children: [
-                                  UserAvatar(
-                                    photoUrl: user.photoUrl,
-                                    displayName: user.name,
-                                    radius: 20,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      user.name,
-                                      style: const TextStyle(
-                                        color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                            return _AttendeeTile(
+                              user: user,
+                              currentUid: currentUid,
                             );
                           },
                         );
@@ -123,6 +107,65 @@ class AttendeeListScreen extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _AttendeeTile extends StatelessWidget {
+  final AppUser user;
+  final String currentUid;
+
+  const _AttendeeTile({required this.user, required this.currentUid});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: kSurface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: kBorder),
+      ),
+      child: Row(
+        children: [
+          UserAvatar(
+            photoUrl: user.photoUrl,
+            displayName: user.name,
+            radius: 20,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              user.name,
+              style: const TextStyle(
+                color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          FutureBuilder<bool>(
+            future: FriendService().isFriend(currentUid, user.uid),
+            builder: (context, snap) {
+              if (!snap.hasData || !snap.data!) return const SizedBox.shrink();
+              return TextButton(
+                onPressed: () async {
+                  final navigator = Navigator.of(context);
+                  await ChatService().getOrCreateChat(currentUid, user.uid);
+                  navigator.push(
+                    MaterialPageRoute(
+                      builder: (_) => ChatScreen(
+                        otherUid: user.uid,
+                        otherDisplayName: user.name,
+                      ),
+                    ),
+                  );
+                },
+                child: const Text('Message', style: TextStyle(color: kAccent, fontWeight: FontWeight.w700)),
+              );
+            },
+          ),
+        ],
       ),
     );
   }

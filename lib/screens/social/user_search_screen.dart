@@ -5,6 +5,8 @@ import 'package:after_hours/services/friend_service.dart';
 import 'package:after_hours/models/user.dart';
 import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/widgets/user_avatar.dart';
+import 'package:after_hours/services/chat_service.dart';
+import 'package:after_hours/screens/chat/chat_screen.dart';
 
 class UserSearchScreen extends StatefulWidget {
   const UserSearchScreen({super.key});
@@ -207,7 +209,24 @@ class _UserResultTileState extends State<_UserResultTile> {
               final pending = snapshot.data![1] || _requestSent;
 
               if (alreadyFriend) {
-                return const Text('Friends', style: TextStyle(color: kMuted, fontWeight: FontWeight.w600));
+                return TextButton(
+                  onPressed: () async {
+                    final navigator = Navigator.of(context);
+                    await ChatService().getOrCreateChat(
+                      widget.currentUid,
+                      widget.uid,
+                    );
+                    navigator.push(
+                      MaterialPageRoute(
+                        builder: (_) => ChatScreen(
+                          otherUid: widget.uid,
+                          otherDisplayName: widget.username,
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text('Message', style: TextStyle(color: kAccent, fontWeight: FontWeight.w700)),
+                );
               }
 
               if (pending) {

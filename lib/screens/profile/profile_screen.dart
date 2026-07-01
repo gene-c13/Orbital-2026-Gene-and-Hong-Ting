@@ -9,6 +9,8 @@ import 'package:after_hours/services/user_service.dart';
 import 'package:after_hours/models/user.dart';
 import 'package:after_hours/widgets/user_avatar.dart';
 import 'package:after_hours/screens/profile/edit_profile_sheet.dart';
+import 'package:after_hours/screens/chat/chat_screen.dart';
+import 'package:after_hours/services/chat_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -135,6 +137,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               _StatItem(label: 'Fave venue', value: (_appUser?.favouriteVenue.isEmpty ?? true) ? '—' : _appUser!.favouriteVenue, icon: Icons.location_on),
                               _StatItem(label: 'Fave genre', value: (_appUser?.favouriteGenre.isEmpty ?? true) ? '—' : _appUser!.favouriteGenre, icon: Icons.music_note),
                             ]),
+                            const SizedBox(height: 24),
+
+                            _sectionLabel('Friends'),
+                            const SizedBox(height: 10),
+                            _friendsCard(user?.uid ?? ''),
                             const SizedBox(height: 24),
 
                             _sectionLabel('Clubs visited'),
@@ -301,6 +308,86 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         );
       }).toList(),
+    );
+  }
+
+  Widget _friendsCard(String currentUid) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUid)
+          .collection('friends')
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: kSurface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: kBorder),
+            ),
+            child: const Text('No friends yet.', style: TextStyle(color: kDim, fontSize: 13)),
+          );
+        }
+
+        final friendUids = snapshot.data!.docs.map((d) => d.id).toList();
+
+        return FutureBuilder<List<AppUser>>(
+          future: UserService().getUsers(friendUids),
+          builder: (context, usersSnap) {
+            if (!usersSnap.hasData) {
+              return const Center(child: CircularProgressIndicator(color: kAccent, strokeWidth: 2));
+            }
+
+            final friends = usersSnap.data!;
+            return Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: kSurface,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: kBorder),
+              ),
+              child: Column(
+                children: friends.map((friend) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      children: [
+                        UserAvatar(photoUrl: friend.photoUrl, displayName: friend.name, radius: 18),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            friend.name,
+                            style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () async {
+                            final navigator = Navigator.of(context);
+                            await ChatService().getOrCreateChat(currentUid, friend.uid);
+                            navigator.push(
+                              MaterialPageRoute(
+                                builder: (_) => ChatScreen(
+                                  otherUid: friend.uid,
+                                  otherDisplayName: friend.name,
+                                ),
+                              ),
+                            );
+                          },
+                          child: const Text('Message', style: TextStyle(color: kAccent, fontWeight: FontWeight.w700)),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 

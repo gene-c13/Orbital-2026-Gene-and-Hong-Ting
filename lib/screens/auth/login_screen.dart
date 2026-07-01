@@ -14,8 +14,9 @@ class LoginScreen extends StatefulWidget { //stateful to track state (error?user
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final emailController    = TextEditingController(); //TextEditingController is a class , connects to text field & captures text 
-  final passwordController = TextEditingController(); //it is connected via controller : emailController in build
+  final emailController    = TextEditingController();
+  final passwordController = TextEditingController();
+  bool _obscurePassword = true;
 
   Future<void> _signIn() async { //backend:this function wires signin button to firebase
     try {
@@ -130,7 +131,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 8),
                       TextField(
                         controller: passwordController,
-                        obscureText: true,
+                        obscureText: _obscurePassword,
                         textInputAction: TextInputAction.done,
                         cursorColor: Colors.white,
                         selectionControls: materialTextSelectionControls,
@@ -144,6 +145,14 @@ class _LoginScreenState extends State<LoginScreen> {
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide.none,
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                              color: const Color(0x80FFFFFF),
+                              size: 20,
+                            ),
+                            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                           ),
                         ),
                       ),

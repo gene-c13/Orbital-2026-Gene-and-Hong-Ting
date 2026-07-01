@@ -6,7 +6,10 @@ import 'package:after_hours/models/event.dart';
 import 'package:after_hours/models/user.dart';
 import 'package:after_hours/services/attendance_service.dart';
 import 'package:after_hours/services/user_service.dart';
+import 'package:after_hours/services/friend_service.dart';
+import 'package:after_hours/services/chat_service.dart';
 import 'package:after_hours/screens/events/attendee_list_screen.dart';
+import 'package:after_hours/screens/chat/chat_screen.dart';
 import 'package:after_hours/widgets/navigation_helper.dart';
 import 'package:after_hours/widgets/user_avatar.dart';
 
@@ -300,6 +303,28 @@ Future<void> _launchBookingUrl(BuildContext context) async {
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
+                                  if (user.uid != currentUid)
+                                    FutureBuilder<bool>(
+                                      future: FriendService().isFriend(currentUid ?? '', user.uid),
+                                      builder: (context, friendSnap) {
+                                        if (!friendSnap.hasData || !friendSnap.data!) return const SizedBox.shrink();
+                                        return TextButton(
+                                          onPressed: () async {
+                                            final navigator = Navigator.of(context);
+                                            await ChatService().getOrCreateChat(currentUid!, user.uid);
+                                            navigator.push(
+                                              MaterialPageRoute(
+                                                builder: (_) => ChatScreen(
+                                                  otherUid: user.uid,
+                                                  otherDisplayName: user.name,
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                          child: const Text('Message', style: TextStyle(color: kAccent, fontSize: 13, fontWeight: FontWeight.w700)),
+                                        );
+                                      },
+                                    ),
                                 ],
                               ),
                             )),
