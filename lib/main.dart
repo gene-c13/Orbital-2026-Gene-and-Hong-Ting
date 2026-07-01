@@ -18,10 +18,10 @@ class AfterHoursApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp( //this is Flutter's top level wrapper that enables navitagtion, theming and routing
       title: 'After Hours',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark().copyWith(
+      theme: ThemeData.dark().copyWith( //copyWith means overriding the dark theme with specific parts you want
         scaffoldBackgroundColor: kBg,
         textTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme),
         colorScheme: const ColorScheme.dark(
@@ -29,7 +29,7 @@ class AfterHoursApp extends StatelessWidget {
           secondary: kPink,
           surface: kBg,
         ),
-        snackBarTheme: const SnackBarThemeData(
+        snackBarTheme: const SnackBarThemeData( //set default color for snackBar which are notifications like "Login failed"
           backgroundColor: Color(0xFF1A0A3B),
           contentTextStyle: TextStyle(color: Colors.white),
         ),
