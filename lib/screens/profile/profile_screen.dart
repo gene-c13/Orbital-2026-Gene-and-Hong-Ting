@@ -9,6 +9,9 @@ import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/screens/auth/login_screen.dart';
 import 'package:after_hours/widgets/navigation_helper.dart';
 import 'package:after_hours/services/friend_service.dart';
+import 'package:after_hours/services/user_service.dart';
+import 'package:after_hours/models/user.dart';
+import 'package:after_hours/widgets/user_avatar.dart';
 
 const _genres = [
   'House', 'Techno', 'Drum & Bass', 'Hip-Hop', 'R&B',
@@ -25,7 +28,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _loading = true;
-  Map<String, dynamic> _userData = {};
+  AppUser? _appUser;
 
   @override
   void initState() {
@@ -36,10 +39,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _loadUserData() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
-    final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    final appUser = await UserService().getUser(user.uid);
     if (!mounted) return;
     setState(() {
-      _userData = doc.exists ? (doc.data() ?? {}) : {};
+      _appUser = appUser;
       _loading = false;
     });
   }
@@ -48,9 +51,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
     final displayName = user.displayName ?? user.email?.split('@').first ?? 'Raver';
-    final genre    = _userData['favourite_genre'] as String?;
-    final venue    = _userData['favourite_venue'] as String?;
-    final photoUrl = _userData['photo_url'] as String?;
+    final genre    = _appUser?.favouriteGenre ?? '';
+    final venue    = _appUser?.favouriteVenue ?? '';
+    final photoUrl = _appUser?.photoUrl ?? '';
 
     showModalBottomSheet(
       context: context,
@@ -58,10 +61,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       backgroundColor: Colors.transparent,
       builder: (_) => _EditProfileSheet(
         initialName:     displayName,
-        username:        _userData['username'] as String? ?? '',
-        initialVenue:    venue    ?? '',
-        initialGenre:    (genre?.isEmpty    ?? true) ? null : genre,
-        initialPhotoUrl: (photoUrl?.isEmpty ?? true) ? null : photoUrl,
+        username:        _appUser?.username ?? '',
+        initialVenue:    venue,
+        initialGenre:    genre.isEmpty    ? null : genre,
+        initialPhotoUrl: photoUrl.isEmpty ? null : photoUrl,
         uid:             user.uid,
         onSaved:         _loadUserData,
       ),
@@ -127,18 +130,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             _sectionLabel('This month'),
                             const SizedBox(height: 10),
                             _statsRow([
-                              _StatItem(label: 'Hours out',  value: '${((_userData['hours_this_month'] ?? 0) as num).toStringAsFixed(1)}h', icon: Icons.nightlife),
-                              _StatItem(label: 'Events',     value: '${_userData['events_this_month'] ?? 0}',                               icon: Icons.calendar_today),
-                              _StatItem(label: 'Puke count', value: '${_userData['puke_count'] ?? 0} 🤮',                                    icon: Icons.sick),
+                              _StatItem(label: 'Hours out',  value: '${(_appUser?.hoursThisMonth ?? 0).toStringAsFixed(1)}h', icon: Icons.nightlife),
+                              _StatItem(label: 'Events',     value: '${_appUser?.eventsThisMonth ?? 0}',                     icon: Icons.calendar_today),
+                              _StatItem(label: 'Puke count', value: '${_appUser?.pukeCount ?? 0} 🤮',                        icon: Icons.sick),
                             ]),
                             const SizedBox(height: 24),
 
                             _sectionLabel('All time'),
                             const SizedBox(height: 10),
                             _statsRow([
-                              _StatItem(label: 'Events',     value: '${_userData['total_events'] ?? 0}',         icon: Icons.confirmation_number),
-                              _StatItem(label: 'Fave venue', value: '${_userData['favourite_venue'] ?? '—'}',     icon: Icons.location_on),
-                              _StatItem(label: 'Fave genre', value: '${_userData['favourite_genre'] ?? '—'}',     icon: Icons.music_note),
+                              _StatItem(label: 'Events',     value: '${_appUser?.totalEvents ?? 0}',                                  icon: Icons.confirmation_number),
+                              _StatItem(label: 'Fave venue', value: (_appUser?.favouriteVenue.isEmpty ?? true) ? '—' : _appUser!.favouriteVenue, icon: Icons.location_on),
+                              _StatItem(label: 'Fave genre', value: (_appUser?.favouriteGenre.isEmpty ?? true) ? '—' : _appUser!.favouriteGenre, icon: Icons.music_note),
                             ]),
                             const SizedBox(height: 24),
 
@@ -165,23 +168,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
 
         final requests = snapshot.data!.docs;
+        final fromUids = requests
+            .map((doc) => (doc.data() as Map<String, dynamic>)['from_uid'] as String)
+            .toList();
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            _sectionLabel('Friend requests'),
-            const SizedBox(height: 10),
-            ...requests.map((doc) {
-              final data = doc.data() as Map<String, dynamic>;
-              final fromUid = data['from_uid'] as String;
+        // Fetch every requester's profile in one batched call instead of
+        // firing a separate Firestore read per row.
+        return FutureBuilder<List<AppUser>>(
+          future: UserService().getUsers(fromUids),
+          builder: (context, usersSnap) {
+            if (!usersSnap.hasData) return const SizedBox.shrink();
 
-              return FutureBuilder<DocumentSnapshot>(
-                future: FirebaseFirestore.instance.collection('users').doc(fromUid).get(),
-                builder: (context, userSnap) {
-                  if (!userSnap.hasData) return const SizedBox.shrink();
-                  final userData = userSnap.data!.data() as Map<String, dynamic>? ?? {};
-                  final username = userData['username'] as String? ?? 'Unknown';
+            final usersByUid = {for (final u in usersSnap.data!) u.uid: u};
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 4),
+                _sectionLabel('Friend requests'),
+                const SizedBox(height: 10),
+                ...requests.map((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  final fromUid = data['from_uid'] as String;
+                  final requester = usersByUid[fromUid];
+                  final username = requester?.name ?? 'Unknown';
 
                   return Container(
                     margin: const EdgeInsets.only(bottom: 10),
@@ -193,13 +203,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     child: Row(
                       children: [
-                        CircleAvatar(
+                        UserAvatar(
+                          photoUrl: requester?.photoUrl,
+                          displayName: username,
                           radius: 20,
-                          backgroundColor: kAccent.withValues(alpha: 0.3),
-                          child: Text(
-                            username[0].toUpperCase(),
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
-                          ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -223,19 +230,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ],
                     ),
                   );
-                },
-              );
-            }),
-            const SizedBox(height: 14),
-          ],
+                }),
+                const SizedBox(height: 14),
+              ],
+            );
+          },
         );
       },
     );
   }
 
   Widget _avatarCard(String displayName) {
-    final photoUrl = _userData['photo_url'] as String?;
-    final hasPhoto = photoUrl != null && photoUrl.isNotEmpty;
+    final photoUrl = _appUser?.photoUrl;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -246,16 +252,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       child: Row(
         children: [
-          CircleAvatar(
+          UserAvatar(
+            photoUrl: photoUrl,
+            displayName: displayName,
             radius: 30,
-            backgroundColor: kAccent.withValues(alpha: 0.25),
-            backgroundImage: hasPhoto ? CachedNetworkImageProvider(photoUrl) : null,
-            child: hasPhoto
-                ? null
-                : Text(
-                    displayName[0].toUpperCase(),
-                    style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold),
-                  ),
+            fontSize: 26,
           ),
           const SizedBox(width: 16),
           Column(
@@ -265,7 +266,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 3),
               Text(
-                _userData['username'] != null ? '@${_userData['username']}' : '',
+                (_appUser?.username.isNotEmpty ?? false) ? '@${_appUser!.username}' : '',
                 style: const TextStyle(color: kMuted, fontSize: 13, fontWeight: FontWeight.w600),
               ),
             ],
@@ -312,7 +313,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _clubsCard() {
-    final clubs = _userData['clubs_visited'] as List<dynamic>? ?? [];
+    final clubs = _appUser?.clubsVisited ?? [];
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
