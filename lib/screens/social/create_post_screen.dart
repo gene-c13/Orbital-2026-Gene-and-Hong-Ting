@@ -7,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:after_hours/theme/app_theme.dart';
+import 'package:after_hours/services/user_service.dart';
 
 class CreatePostScreen extends StatefulWidget {
   const CreatePostScreen({super.key});
@@ -208,8 +209,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     try {
       final user        = FirebaseAuth.instance.currentUser!;
       final displayName = user.displayName ?? user.email?.split('@').first ?? 'Raver';
-      final userDoc     = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-      final username    = userDoc.data()?['username'] as String? ?? '';
+      final appUser     = await UserService().getUser(user.uid);
+      final username    = appUser?.username ?? '';
       final venue       = _venueController.text.trim();
       final hours    = _hoursOut();
       final imageUrl = _imageFile != null ? await _uploadImage(user.uid) : '';

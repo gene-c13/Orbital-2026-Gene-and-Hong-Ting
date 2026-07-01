@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:after_hours/services/friend_service.dart';
+import 'package:after_hours/models/user.dart';
 import 'package:after_hours/theme/app_theme.dart';
+import 'package:after_hours/widgets/user_avatar.dart';
 
 class UserSearchScreen extends StatefulWidget {
   const UserSearchScreen({super.key});
@@ -16,7 +18,7 @@ class _UserSearchScreenState extends State<UserSearchScreen> {
   final _friendService = FriendService();
   final _currentUid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
-  List<Map<String, dynamic>> _results = [];
+  List<AppUser> _results = [];
   bool _loading = false;
 
   @override
@@ -52,8 +54,8 @@ class _UserSearchScreenState extends State<UserSearchScreen> {
         .get();
 
     final results = snapshot.docs
-        .map((doc) => {'uid': doc.id, ...doc.data()})
-        .where((user) => user['uid'] != _currentUid)
+        .map((doc) => AppUser.fromFirestore(doc.data() as Map<String, dynamic>, doc.id))
+        .where((user) => user.uid != _currentUid)
         .toList();
 
     setState(() {
@@ -128,12 +130,11 @@ class _UserSearchScreenState extends State<UserSearchScreen> {
                     itemCount: _results.length,
                     itemBuilder: (context, index) {
                       final user = _results[index];
-                      final uid = user['uid'] as String;
-                      final username = user['username'] as String? ?? 'Unknown';
 
                       return _UserResultTile(
-                        uid: uid,
-                        username: username,
+                        uid: user.uid,
+                        username: user.username,
+                        photoUrl: user.photoUrl,
                         currentUid: _currentUid,
                         friendService: _friendService,
                       );
@@ -151,12 +152,14 @@ class _UserSearchScreenState extends State<UserSearchScreen> {
 class _UserResultTile extends StatefulWidget {
   final String uid;
   final String username;
+  final String? photoUrl;
   final String currentUid;
   final FriendService friendService;
 
   const _UserResultTile({
     required this.uid,
     required this.username,
+    this.photoUrl,
     required this.currentUid,
     required this.friendService,
   });
@@ -180,13 +183,10 @@ class _UserResultTileState extends State<_UserResultTile> {
       ),
       child: Row(
         children: [
-          CircleAvatar(
+          UserAvatar(
+            photoUrl: widget.photoUrl,
+            displayName: widget.username,
             radius: 20,
-            backgroundColor: kAccent.withValues(alpha: 0.3),
-            child: Text(
-              widget.username[0].toUpperCase(),
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
-            ),
           ),
           const SizedBox(width: 12),
           Expanded(

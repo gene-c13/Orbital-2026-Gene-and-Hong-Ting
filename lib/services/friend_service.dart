@@ -1,9 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:after_hours/models/user.dart';
+import 'package:after_hours/services/user_service.dart';
 
 class FriendService {
   final _db = FirebaseFirestore.instance;
+  final _userService = UserService();
 
-  Future<Map<String, dynamic>?> searchByUsername(String username) async {
+  Future<AppUser?> searchByUsername(String username) async {
     final usernameDoc = await _db
         .collection('usernames')
         .doc(username.toLowerCase().trim())
@@ -14,10 +17,7 @@ class FriendService {
     final uid = usernameDoc.data()?['uid'] as String?;
     if (uid == null) return null;
 
-    final userDoc = await _db.collection('users').doc(uid).get();
-    if (!userDoc.exists) return null;
-
-    return {'uid': uid, ...?userDoc.data()};
+    return _userService.getUser(uid);
   }
 
   Future<void> sendFriendRequest(String fromUid, String toUid) async {
