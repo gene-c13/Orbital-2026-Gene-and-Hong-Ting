@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/models/event.dart';
+import 'package:after_hours/models/user.dart';
+import 'package:after_hours/services/attendance_service.dart';
+import 'package:after_hours/services/user_service.dart';
+import 'package:after_hours/screens/events/attendee_list_screen.dart';
 import 'package:after_hours/widgets/navigation_helper.dart';
+import 'package:after_hours/widgets/user_avatar.dart';
 
 class EventDetailScreen extends StatelessWidget {
   final Event event;
@@ -70,6 +76,8 @@ Future<void> _launchBookingUrl(BuildContext context) async {
                       _heroCard(),
                       const SizedBox(height: 12),
                       _infoGrid(),
+                      const SizedBox(height: 12),
+                      _attendanceSection(context),
                       const SizedBox(height: 12),
                       _section(
                         label: 'Genres',
@@ -235,6 +243,128 @@ Future<void> _launchBookingUrl(BuildContext context) async {
         ),
         if (divider) const Divider(height: 1, color: kBorder),
       ],
+    );
+  }
+
+  Widget _attendanceSection(BuildContext context) {
+    final currentUid = FirebaseAuth.instance.currentUser?.uid;
+
+    return StreamBuilder<List<String>>(
+      stream: AttendanceService().attendeeUidsStream(event.id),
+      builder: (context, snapshot) {
+        final uids = snapshot.data ?? [];
+        final isAttending = currentUid != null && uids.contains(currentUid);
+
+        return _section(
+          label: "Who's going",
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      uids.isEmpty ? 'No one yet — be the first!' : '${uids.length} going',
+                      style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  _goingButton(currentUid, isAttending),
+                ],
+              ),
+              if (uids.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                FutureBuilder<List<AppUser>>(
+                  future: UserService().getUsers(uids.take(5).toList()),
+                  builder: (context, userSnap) {
+                    if (!userSnap.hasData) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8),
+                        child: Center(child: CircularProgressIndicator(color: kAccent, strokeWidth: 2)),
+                      );
+                    }
+
+                    final users = userSnap.data!;
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ...users.map((user) => Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: Row(
+                                children: [
+                                  UserAvatar(photoUrl: user.photoUrl, displayName: user.name, radius: 16),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      user.name,
+                                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )),
+                        if (uids.length > 5)
+                          GestureDetector(
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => AttendeeListScreen(eventId: event.id, eventName: event.name),
+                              ),
+                            ),
+                            child: Text(
+                              'See all ${uids.length}',
+                              style: const TextStyle(color: kAccent, fontSize: 13, fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _goingButton(String? uid, bool isAttending) {
+    if (uid == null) return const SizedBox.shrink();
+
+    return GestureDetector(
+      onTap: () {
+        if (isAttending) {
+          AttendanceService().unmarkAttending(event.id, uid);
+        } else {
+          AttendanceService().markAttending(event.id, uid);
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: isAttending ? Colors.transparent : kAccent,
+          borderRadius: BorderRadius.circular(20),
+          border: isAttending ? Border.all(color: kAccent) : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isAttending ? Icons.check : Icons.add,
+              color: isAttending ? kAccent : Colors.white,
+              size: 14,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              isAttending ? 'Going' : "I'm going",
+              style: TextStyle(
+                color: isAttending ? kAccent : Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

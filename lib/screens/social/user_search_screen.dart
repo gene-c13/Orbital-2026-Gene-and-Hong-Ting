@@ -54,7 +54,7 @@ class _UserSearchScreenState extends State<UserSearchScreen> {
         .get();
 
     final results = snapshot.docs
-        .map((doc) => AppUser.fromFirestore(doc.data() as Map<String, dynamic>, doc.id))
+        .map((doc) => AppUser.fromFirestore(doc.data(), doc.id))
         .where((user) => user.uid != _currentUid)
         .toList();
 

@@ -1,6 +1,5 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:after_hours/theme/app_theme.dart';
@@ -23,6 +22,7 @@ class EditProfileSheet extends StatefulWidget {
   final VoidCallback onSaved;
 
   const EditProfileSheet({
+    super.key,
     required this.initialName,
     required this.username,
     required this.initialVenue,
@@ -34,7 +34,7 @@ class EditProfileSheet extends StatefulWidget {
   });
 
   @override
-  State<EditProfileSheet> createState() => EditProfileSheetState();
+  State<EditProfileSheet> createState() => _EditProfileSheetState();
 }
 
 class _EditProfileSheetState extends State<EditProfileSheet> {
@@ -42,7 +42,6 @@ class _EditProfileSheetState extends State<EditProfileSheet> {
   late final TextEditingController _venueController;
 
   String?    _selectedGenre;
-  XFile?     _pickedFile;
   Uint8List? _pickedBytes;
   bool       _submitting = false;
   bool       _isPublic = true;
@@ -106,7 +105,6 @@ class _EditProfileSheetState extends State<EditProfileSheet> {
 
     final bytes = await picked.readAsBytes();
     setState(() {
-      _pickedFile  = picked;
       _pickedBytes = bytes;
     });
   }
@@ -407,7 +405,7 @@ Future<void> _save() async {
                           Switch(
                             value: _isPublic,
                             onChanged: (val) => setState(() => _isPublic = val),
-                            activeColor: kAccent,
+                            activeThumbColor: kAccent,
                           ),
                         ],
                       ),

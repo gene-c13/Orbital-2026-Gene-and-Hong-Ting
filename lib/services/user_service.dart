@@ -60,10 +60,8 @@ class UserService {
 
   /// Saves profile-edit changes in one place: display name (both Firebase
   /// Auth and Firestore), favourite venue/genre, the public/private toggle,
-  /// and — if the user picked a new one — their avatar.
-  ///
-  /// This is meant to replace the manual updateDisplayName + upload + set
-  /// sequence that currently lives inline in _EditProfileSheet._save().
+  /// and — if the user picked a new one — their avatar. Called from
+  /// EditProfileSheet's save button.
   Future<void> updateProfile({
     required String uid,
     required String displayName,

@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/models/event.dart';
+import 'package:after_hours/models/user.dart';
 import 'package:after_hours/services/event_service.dart';
+import 'package:after_hours/services/attendance_service.dart';
+import 'package:after_hours/services/user_service.dart';
 import 'package:after_hours/screens/events/event_detail_screen.dart';
 import 'package:after_hours/widgets/navigation_helper.dart';
 
@@ -16,6 +19,7 @@ class EventsScreen extends StatefulWidget {
 class _EventsScreenState extends State<EventsScreen> {
   DateTime selectedDate = DateTime.now();
   final EventService _eventService = EventService();
+  final AttendanceService _attendanceService = AttendanceService();
 
   bool _searching = false;
   String _query = '';
@@ -312,10 +316,65 @@ class _EventsScreenState extends State<EventsScreen> {
                 _crowdBadge(event.crowdLevel),
               ],
             ),
+            _attendanceSnippet(event.id),
           ],
         ),
       ),
     );
+  }
+
+  /// "John, Emma, and 3 others are going!" — hidden entirely if no one's
+  /// marked themselves attending yet.
+  Widget _attendanceSnippet(String eventId) {
+    if (eventId.isEmpty) return const SizedBox.shrink();
+
+    return StreamBuilder<List<String>>(
+      stream: _attendanceService.attendeeUidsStream(eventId),
+      builder: (context, snapshot) {
+        final uids = snapshot.data ?? [];
+        if (uids.isEmpty) return const SizedBox.shrink();
+
+        return FutureBuilder<List<AppUser>>(
+          future: UserService().getUsers(uids.take(2).toList()),
+          builder: (context, userSnap) {
+            final names = (userSnap.data ?? []).map((u) => u.name).toList();
+            if (names.isEmpty) return const SizedBox.shrink();
+
+            return Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Row(
+                children: [
+                  const Icon(Icons.people_outline, color: kAccent, size: 14),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      _attendanceText(names, uids.length),
+                      style: const TextStyle(color: kMuted, fontSize: 12, fontWeight: FontWeight.w600),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  String _attendanceText(List<String> names, int total) {
+    final others = total - names.length;
+    final othersLabel = others == 1 ? 'other' : 'others';
+
+    if (names.length == 1) {
+      return others > 0
+          ? '${names[0]} and $others $othersLabel are going!'
+          : '${names[0]} is going!';
+    }
+
+    return others > 0
+        ? '${names[0]}, ${names[1]}, and $others $othersLabel are going!'
+        : '${names[0]} and ${names[1]} are going!';
   }
 
   Widget _dot() => const Padding(
