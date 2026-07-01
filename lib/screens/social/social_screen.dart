@@ -8,9 +8,50 @@ import 'package:after_hours/screens/social/create_post_screen.dart';
 import 'package:after_hours/widgets/navigation_helper.dart';
 import 'package:after_hours/screens/social/comments_sheet.dart';
 import 'package:after_hours/screens/social/user_search_screen.dart';
+import 'package:after_hours/services/user_service.dart';
+import 'package:after_hours/services/friend_service.dart';
 
 class SocialScreen extends StatelessWidget {
   const SocialScreen({super.key});
+
+  /// Filters posts down to ones the current viewer is allowed to see: their
+  /// own, anyone with a public profile, or a friend with a private one.
+  /// Fetches each distinct author once (via UserService.getUsers) rather
+  /// than re-checking per post, since the same author often has several
+  /// posts in the feed.
+  Future<List<QueryDocumentSnapshot>> _visiblePosts(
+    List<QueryDocumentSnapshot> docs,
+  ) async {
+    final currentUid = FirebaseAuth.instance.currentUser?.uid;
+    if (currentUid == null) return [];
+
+    final authorUids = docs
+        .map((doc) => (doc.data() as Map<String, dynamic>)['uid'] as String?)
+        .whereType<String>()
+        .toSet()
+        .toList();
+
+    final authors = await UserService().getUsers(authorUids);
+    final authorsByUid = {for (final a in authors) a.uid: a};
+    final friendService = FriendService();
+
+    final visible = <QueryDocumentSnapshot>[];
+    for (final doc in docs) {
+      final authorUid = (doc.data() as Map<String, dynamic>)['uid'] as String?;
+      if (authorUid == null) continue;
+
+      final isOwnPost = authorUid == currentUid;
+      final isPublic = authorsByUid[authorUid]?.isPublic ?? true;
+
+      if (isOwnPost || isPublic) {
+        visible.add(doc);
+      } else if (await friendService.isFriend(currentUid, authorUid)) {
+        visible.add(doc);
+      }
+    }
+
+    return visible;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -87,34 +128,47 @@ class SocialScreen extends StatelessWidget {
                       );
                     }
                     final docs = snapshot.data?.docs ?? [];
-                    if (docs.isEmpty) {
-                      return Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.photo_camera_outlined, color: kDim, size: 56),
-                            const SizedBox(height: 18),
-                            const Text(
-                              'No posts yet.',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 21,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.2,
-                              ),
+
+                    return FutureBuilder<List<QueryDocumentSnapshot>>(
+                      future: _visiblePosts(docs),
+                      builder: (context, visibleSnap) {
+                        if (!visibleSnap.hasData) {
+                          return const Center(child: CircularProgressIndicator(color: kAccent, strokeWidth: 2));
+                        }
+
+                        final visibleDocs = visibleSnap.data!;
+
+                        if (visibleDocs.isEmpty) {
+                          return Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.photo_camera_outlined, color: kDim, size: 56),
+                                const SizedBox(height: 18),
+                                const Text(
+                                  'No posts yet.',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 21,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.2,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                const Text('Be the first to log a night.', style: TextStyle(color: kDim, fontSize: 13)),
+                              ],
                             ),
-                            const SizedBox(height: 8),
-                            const Text('Be the first to log a night.', style: TextStyle(color: kDim, fontSize: 13)),
-                          ],
-                        ),
-                      );
-                    }
-                    return ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
-                      itemCount: docs.length,
-                      itemBuilder: (context, index) {
-                        final data = docs[index].data() as Map<String, dynamic>;
-                        return _PostCard(postId: docs[index].id, data: data);
+                          );
+                        }
+
+                        return ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+                          itemCount: visibleDocs.length,
+                          itemBuilder: (context, index) {
+                            final data = visibleDocs[index].data() as Map<String, dynamic>;
+                            return _PostCard(postId: visibleDocs[index].id, data: data);
+                          },
+                        );
                       },
                     );
                   },

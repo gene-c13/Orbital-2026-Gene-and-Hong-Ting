@@ -2,7 +2,6 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:after_hours/theme/app_theme.dart';
@@ -65,6 +64,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         initialVenue:    venue,
         initialGenre:    genre.isEmpty    ? null : genre,
         initialPhotoUrl: photoUrl.isEmpty ? null : photoUrl,
+        initialIsPublic: _appUser?.isPublic ?? true,
         uid:             user.uid,
         onSaved:         _loadUserData,
       ),
@@ -375,6 +375,7 @@ class _EditProfileSheet extends StatefulWidget {
   final String  initialVenue;
   final String? initialGenre;
   final String? initialPhotoUrl;
+  final bool    initialIsPublic;
   final String  uid;
   final VoidCallback onSaved;
 
@@ -384,6 +385,7 @@ class _EditProfileSheet extends StatefulWidget {
     required this.initialVenue,
     required this.initialGenre,
     required this.initialPhotoUrl,
+    required this.initialIsPublic,
     required this.uid,
     required this.onSaved,
   });
@@ -397,9 +399,9 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
   late final TextEditingController _venueController;
 
   String?    _selectedGenre;
-  XFile?     _pickedFile;
   Uint8List? _pickedBytes;
   bool       _submitting = false;
+  late bool  _isPublic;
 
   @override
   void initState() {
@@ -407,6 +409,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
     _nameController  = TextEditingController(text: widget.initialName);
     _venueController = TextEditingController(text: widget.initialVenue);
     _selectedGenre   = widget.initialGenre;
+    _isPublic        = widget.initialIsPublic;
   }
 
   @override
@@ -459,7 +462,6 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
 
     final bytes = await picked.readAsBytes();
     setState(() {
-      _pickedFile  = picked;
       _pickedBytes = bytes;
     });
   }
@@ -516,13 +518,6 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
     );
   }
 
-  Future<String?> _uploadAvatar() async {
-    if (_pickedBytes == null) return null;
-    final ref = FirebaseStorage.instance.ref('avatars/${widget.uid}.jpg');
-    await ref.putData(_pickedBytes!);
-    return ref.getDownloadURL();
-  }
-
   Future<void> _save() async {
     final name = _nameController.text.trim();
     if (name.length < 2) {
@@ -533,25 +528,14 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
     setState(() => _submitting = true);
 
     try {
-      final user = FirebaseAuth.instance.currentUser!;
-      await user.updateDisplayName(name);
-
-      String? photoUrl;
-      if (_pickedFile != null) {
-        photoUrl = await _uploadAvatar();
-      }
-
-      final data = <String, dynamic>{
-        'display_name':    name,
-        'favourite_venue': _venueController.text.trim(),
-        'favourite_genre': _selectedGenre ?? '',
-      };
-      if (photoUrl != null) data['photo_url'] = photoUrl;
-
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .set(data, SetOptions(merge: true));
+      await UserService().updateProfile(
+        uid:            widget.uid,
+        displayName:    name,
+        favouriteVenue: _venueController.text.trim(),
+        favouriteGenre: _selectedGenre ?? '',
+        isPublic:       _isPublic,
+        avatarBytes:    _pickedBytes,
+      );
 
       if (!mounted) return;
       widget.onSaved();
@@ -747,6 +731,54 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                       hint:       'e.g. Fabric, Printworks...',
                       icon:       Icons.location_on_outlined,
                       action:     TextInputAction.done,
+                    ),
+                    const SizedBox(height: 22),
+
+                    _fieldLabel('PROFILE VISIBILITY'),
+                    const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: kSurface,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: kBorder),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _isPublic ? Icons.public : Icons.lock_outline,
+                            color: kAccent,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _isPublic ? 'Public profile' : 'Private profile',
+                                  style: const TextStyle(
+                                    color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _isPublic
+                                      ? 'Anyone can see your photo and posts.'
+                                      : 'Only friends can see your photo and posts.',
+                                  style: const TextStyle(color: kDim, fontSize: 12),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Switch(
+                            value: _isPublic,
+                            activeColor: kAccent,
+                            onChanged: (value) => setState(() => _isPublic = value),
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 40),
 

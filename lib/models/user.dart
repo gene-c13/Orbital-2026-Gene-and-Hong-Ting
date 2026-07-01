@@ -10,6 +10,7 @@ class AppUser {
   final int eventsThisMonth;
   final int totalEvents;
   final int pukeCount;
+  final bool isPublic;
 
   const AppUser({
     required this.uid,
@@ -23,6 +24,7 @@ class AppUser {
     this.eventsThisMonth = 0,
     this.totalEvents = 0,
     this.pukeCount = 0,
+    this.isPublic = true,
   });
 
   /// Display name to show, falling back to [username].
@@ -48,6 +50,7 @@ class AppUser {
       eventsThisMonth: ((data['events_this_month'] ?? 0) as num).toInt(),
       totalEvents: ((data['total_events'] ?? 0) as num).toInt(),
       pukeCount: ((data['puke_count'] ?? 0) as num).toInt(),
+      isPublic: data['is_public'] as bool? ?? true,
     );
   }
 }

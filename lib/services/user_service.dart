@@ -1,9 +1,13 @@
+import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:after_hours/models/user.dart';
+import 'package:after_hours/services/friend_service.dart';
 
-/// Centralises reads of the `users` collection so screens work with typed
-/// [AppUser] objects instead of raw Firestore maps (same role EventService
-/// plays for `events`).
+/// Centralises reads and writes of the `users` collection so screens work
+/// with typed [AppUser] objects instead of raw Firestore maps (same role
+/// EventService plays for `events`).
 class UserService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -27,8 +31,8 @@ class UserService {
 
   /// Fetches multiple users by uid in as few queries as possible — for
   /// attendee lists, friend lists, chat participant lists, etc., instead of
-  /// firing one FutureBuilder per uid. Firestore's `whereIn` only accepts up
-  /// to 10 values per query, so this batches automatically for longer lists.
+  /// firing one read per uid. Firestore's `whereIn` only accepts up to 10
+  /// values per query, so this batches automatically for longer lists.
   Future<List<AppUser>> getUsers(List<String> uids) async {
     if (uids.isEmpty) return [];
 
@@ -46,5 +50,56 @@ class UserService {
       ));
     }
     return results;
+  }
+
+  Future<String> _uploadAvatar(String uid, Uint8List bytes) async {
+    final ref = FirebaseStorage.instance.ref('avatars/$uid.jpg');
+    await ref.putData(bytes);
+    return ref.getDownloadURL();
+  }
+
+  /// Saves profile-edit changes in one place: display name (both Firebase
+  /// Auth and Firestore), favourite venue/genre, the public/private toggle,
+  /// and — if the user picked a new one — their avatar.
+  ///
+  /// This is meant to replace the manual updateDisplayName + upload + set
+  /// sequence that currently lives inline in _EditProfileSheet._save().
+  Future<void> updateProfile({
+    required String uid,
+    required String displayName,
+    required String favouriteVenue,
+    required String favouriteGenre,
+    required bool isPublic,
+    Uint8List? avatarBytes,
+  }) async {
+    await FirebaseAuth.instance.currentUser?.updateDisplayName(displayName);
+
+    String? photoUrl;
+    if (avatarBytes != null) {
+      photoUrl = await _uploadAvatar(uid, avatarBytes);
+    }
+
+    final data = <String, dynamic>{
+      'display_name':    displayName,
+      'favourite_venue': favouriteVenue,
+      'favourite_genre': favouriteGenre,
+      'is_public':       isPublic,
+    };
+    if (photoUrl != null) data['photo_url'] = photoUrl;
+
+    await _usersCollection.doc(uid).set(data, SetOptions(merge: true));
+  }
+
+  /// Whether [currentUid] should be allowed to see a post authored by
+  /// [authorUid]: always true for your own posts, true if the author's
+  /// profile is public, otherwise gated on the existing friends
+  /// relationship (a stand-in until following/followers exists).
+  Future<bool> isPostVisible(String currentUid, String authorUid) async {
+    if (authorUid == currentUid) return true;
+
+    final author = await getUser(authorUid);
+    if (author == null || author.isPublic) return true;
+
+    return FriendService().isFriend(currentUid, authorUid);
   }
 }
