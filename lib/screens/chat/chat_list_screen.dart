@@ -6,6 +6,7 @@ import 'package:after_hours/services/chat_service.dart';
 import 'package:after_hours/services/user_service.dart';
 import 'package:after_hours/models/user.dart';
 import 'package:after_hours/screens/chat/chat_screen.dart';
+import 'package:after_hours/widgets/user_avatar.dart';
 
 class ChatListScreen extends StatelessWidget { //stateless because the streambuilder handles its own live updates internally
   const ChatListScreen({super.key}); //identify the widget so it can track it across rebuilds
@@ -69,46 +70,57 @@ class ChatListScreen extends StatelessWidget { //stateless because the streambui
                       );
                     }
 
-                    return ListView.builder( //builder is constructor that builds items on demand ie.simply build whats visible on screen
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      itemCount: docs.length,
-                      itemBuilder: (context, index) {
-                        final data = docs[index].data() as Map<String, dynamic>;
-                        final participants = List<String>.from(data['participants'] ?? []);
-                        final otherUid = participants.firstWhere( //pick the uid that isnt you
-                          (uid) => uid != currentUid,
-                          orElse: () => '',
-                        );
+                    // collect the other-user uid from each chat doc
+                    final otherUids = docs.map((doc) {
+                      final d = doc.data() as Map<String, dynamic>;
+                      final participants = List<String>.from(d['participants'] ?? []);
+                      return participants.firstWhere(
+                        (uid) => uid != currentUid,
+                        orElse: () => '',
+                      );
+                    }).where((uid) => uid.isNotEmpty).toList();
 
-                        return FutureBuilder<AppUser?>( //fetches other AppUser object and all their data
-                          future: UserService().getUser(otherUid),
-                          builder: (context, userSnap) {
-                            if (!userSnap.hasData) return const SizedBox.shrink();
+                    // one batch fetch for all participants, not one per row
+                    return FutureBuilder<List<AppUser>>(
+                      future: UserService().getUsers(otherUids),
+                      builder: (context, userSnap) {
+                        if (!userSnap.hasData) {
+                          return const Center(
+                            child: CircularProgressIndicator(color: kAccent, strokeWidth: 2),
+                          );
+                        }
 
-                            final other = userSnap.data!;
+                        final userMap = {for (final u in userSnap.data!) u.uid: u};
+
+                        return ListView.builder(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          itemCount: docs.length,
+                          itemBuilder: (context, index) {
+                            final data = docs[index].data() as Map<String, dynamic>;
+                            final participants = List<String>.from(data['participants'] ?? []);
+                            final otherUid = participants.firstWhere(
+                              (uid) => uid != currentUid,
+                              orElse: () => '',
+                            );
+                            final other = userMap[otherUid];
+                            if (other == null) return const SizedBox.shrink();
+
                             final lastMessage = data['last_message'] as String? ?? '';
 
                             return ListTile(
                               contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-                              leading: CircleAvatar( //leading means widget on the left
-                                radius: 24,
-                                backgroundColor: kAccent.withValues(alpha: 0.3),
-                                child: Text(
-                                  (other.name.isEmpty ? '?' : other.name[0]).toUpperCase(), //grabs the first character of name and capitalise for avatar initial
-                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
-                                ),
-                              ),
-                              title: Text( //main bold text
+                              leading: UserAvatar(displayName: other.name, photoUrl: other.photoUrl, radius: 24),
+                              title: Text(
                                 other.name,
                                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
                               ),
-                              subtitle: Text( //smaller dimmer text
+                              subtitle: Text(
                                 lastMessage.isEmpty ? '@${other.username}' : lastMessage,
                                 style: const TextStyle(color: kDim, fontSize: 13),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                              onTap: () => Navigator.of(context).push( //what happens when tapped
+                              onTap: () => Navigator.of(context).push(
                                 MaterialPageRoute(
                                   builder: (_) => ChatScreen(
                                     otherUid:         otherUid,

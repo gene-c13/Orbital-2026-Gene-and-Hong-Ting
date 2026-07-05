@@ -76,6 +76,14 @@ class FriendService {
     return doc.exists;
   }
 
+  Stream<QuerySnapshot> friendsStream(String uid) {
+    return _db
+        .collection('users')
+        .doc(uid)
+        .collection('friends')
+        .snapshots();
+  }
+
   Future<bool> hasPendingRequest(String fromUid, String toUid) async {
     // check both A→B and B→A so the search screen shows "Sent" or hides "Add"
     // in both directions, since sendFriendRequest uses a deterministic doc ID

@@ -5,6 +5,7 @@ import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/screens/auth/login_screen.dart';
 import 'package:after_hours/widgets/navigation_helper.dart';
 import 'package:after_hours/services/friend_service.dart';
+import 'package:after_hours/services/auth_service.dart';
 import 'package:after_hours/services/user_service.dart';
 import 'package:after_hours/models/user.dart';
 import 'package:after_hours/widgets/user_avatar.dart';
@@ -20,33 +21,13 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  bool _loading = true;
-  AppUser? _appUser;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadUserData();
-  }
-
-  Future<void> _loadUserData() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) { setState(() => _loading = false); return; }
-    final appUser = await UserService().getUser(user.uid);
-    if (!mounted) return;
-    setState(() {
-      _appUser = appUser;
-      _loading = false;
-    });
-  }
-
-  void _openEditPopup() {
+  void _openEditPopup(AppUser? appUser) {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
-    final displayName = user.displayName ?? user.email?.split('@').first ?? 'Raver';
-    final genre    = _appUser?.favouriteGenre ?? '';
-    final venue    = _appUser?.favouriteVenue ?? '';
-    final photoUrl = _appUser?.photoUrl ?? '';
+    final displayName = AuthService().currentDisplayName;
+    final genre    = appUser?.favouriteGenre ?? '';
+    final venue    = appUser?.favouriteVenue ?? '';
+    final photoUrl = appUser?.photoUrl ?? '';
 
     showModalBottomSheet(
       context: context,
@@ -54,107 +35,116 @@ class _ProfileScreenState extends State<ProfileScreen> {
       backgroundColor: Colors.transparent,
       builder: (_) => EditProfileSheet(
         initialName:     displayName,
-        username:        _appUser?.username ?? '',
+        username:        appUser?.username ?? '',
         initialVenue:    venue,
         initialGenre:    genre.isEmpty    ? null : genre,
         initialPhotoUrl: photoUrl.isEmpty ? null : photoUrl,
-        initialIsPublic: _appUser?.isPublic ?? true,
+        initialIsPublic: appUser?.isPublic ?? true,
         uid:             user.uid,
-        onSaved:         _loadUserData,
+        onSaved:         () {},
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final user        = FirebaseAuth.instance.currentUser;
-    final displayName = user?.displayName ?? user?.email?.split('@').first ?? 'Raver';
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return const SizedBox.shrink();
 
-    return Scaffold(
-      bottomNavigationBar: buildNavBar(3, (i) { if (i != 3) goToTab(context, i); }),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: kBgDecoration,
-        child: SafeArea(
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 16, 12),
-                child: Row(
-                  children: [
-                    Text('PROFILE', style: kNectarine(size: 28, letterSpacing: 4)),
-                    const Spacer(),
-                    GestureDetector(
-                      onTap: _openEditPopup,
-                      child: const Padding(
-                        padding: EdgeInsets.all(8),
-                        child: Icon(Icons.edit_outlined, color: kDim, size: 20),
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () async {
-                        await FirebaseAuth.instance.signOut();
-                        if (!context.mounted) return;
-                        Navigator.of(context).pushReplacement(
-                          MaterialPageRoute(builder: (_) => const LoginScreen()),
-                        );
-                      },
-                      child: const Padding(
-                        padding: EdgeInsets.all(8),
-                        child: Icon(Icons.logout, color: kDim, size: 20),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1, thickness: 1, color: kBorder),
-              Expanded(
-                child: _loading
-                    ? const Center(child: CircularProgressIndicator(color: kAccent, strokeWidth: 2))
-                    : SingleChildScrollView(
-                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _friendRequestsSection(user?.uid ?? ''),
-                            _avatarCard(displayName),
-                            const SizedBox(height: 24),
+    final displayName = AuthService().currentDisplayName;
 
-                            _sectionLabel('This month'),
-                            const SizedBox(height: 10),
-                            _statsRow([
-                              _StatItem(label: 'Hours out',  value: '${(_appUser?.hoursThisMonth ?? 0).toStringAsFixed(1)}h', icon: Icons.nightlife),
-                              _StatItem(label: 'Events',     value: '${_appUser?.eventsThisMonth ?? 0}',                     icon: Icons.calendar_today),
-                              _StatItem(label: 'Puke count', value: '${_appUser?.pukeCount ?? 0} 🤮',                        icon: Icons.sick),
-                            ]),
-                            const SizedBox(height: 24),
+    return StreamBuilder<AppUser?>(
+      stream: UserService().userStream(user.uid),
+      builder: (context, snapshot) {
+        final appUser = snapshot.data;
 
-                            _sectionLabel('All time'),
-                            const SizedBox(height: 10),
-                            _statsRow([
-                              _StatItem(label: 'Events',     value: '${_appUser?.totalEvents ?? 0}',                                  icon: Icons.confirmation_number),
-                              _StatItem(label: 'Fave venue', value: (_appUser?.favouriteVenue.isEmpty ?? true) ? '—' : _appUser!.favouriteVenue, icon: Icons.location_on),
-                              _StatItem(label: 'Fave genre', value: (_appUser?.favouriteGenre.isEmpty ?? true) ? '—' : _appUser!.favouriteGenre, icon: Icons.music_note),
-                            ]),
-                            const SizedBox(height: 24),
-
-                            _sectionLabel('Friends'),
-                            const SizedBox(height: 10),
-                            _friendsCard(user?.uid ?? ''),
-                            const SizedBox(height: 24),
-
-                            _sectionLabel('Clubs visited'),
-                            const SizedBox(height: 10),
-                            _clubsCard(),
-                          ],
+        return Scaffold(
+          bottomNavigationBar: buildNavBar(3, (i) { if (i != 3) goToTab(context, i); }),
+          body: Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: kBgDecoration,
+            child: SafeArea(
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 16, 12),
+                    child: Row(
+                      children: [
+                        Text('PROFILE', style: kNectarine(size: 28, letterSpacing: 4)),
+                        const Spacer(),
+                        GestureDetector(
+                          onTap: () => _openEditPopup(appUser),
+                          child: const Padding(
+                            padding: EdgeInsets.all(8),
+                            child: Icon(Icons.edit_outlined, color: kDim, size: 20),
+                          ),
                         ),
-                      ),
+                        GestureDetector(
+                          onTap: () async {
+                            await FirebaseAuth.instance.signOut();
+                            if (!context.mounted) return;
+                            Navigator.of(context).pushReplacement(
+                              MaterialPageRoute(builder: (_) => const LoginScreen()),
+                            );
+                          },
+                          child: const Padding(
+                            padding: EdgeInsets.all(8),
+                            child: Icon(Icons.logout, color: kDim, size: 20),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1, thickness: 1, color: kBorder),
+                  Expanded(
+                    child: !snapshot.hasData
+                        ? const Center(child: CircularProgressIndicator(color: kAccent, strokeWidth: 2))
+                        : SingleChildScrollView(
+                            padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _friendRequestsSection(user.uid),
+                                _avatarCard(displayName, appUser?.photoUrl, appUser?.username ?? ''),
+                                const SizedBox(height: 24),
+
+                                _sectionLabel('This month'),
+                                const SizedBox(height: 10),
+                                _statsRow([
+                                  _StatItem(label: 'Hours out',  value: '${(appUser?.hoursThisMonth ?? 0).toStringAsFixed(1)}h', icon: Icons.nightlife),
+                                  _StatItem(label: 'Events',     value: '${appUser?.eventsThisMonth ?? 0}',                     icon: Icons.calendar_today),
+                                  _StatItem(label: 'Puke count', value: '${appUser?.pukeCount ?? 0} 🤮',                        icon: Icons.sick),
+                                ]),
+                                const SizedBox(height: 24),
+
+                                _sectionLabel('All time'),
+                                const SizedBox(height: 10),
+                                _statsRow([
+                                  _StatItem(label: 'Events',     value: '${appUser?.totalEvents ?? 0}',                                         icon: Icons.confirmation_number),
+                                  _StatItem(label: 'Fave venue', value: (appUser?.favouriteVenue.isEmpty ?? true) ? '—' : appUser!.favouriteVenue, icon: Icons.location_on),
+                                  _StatItem(label: 'Fave genre', value: (appUser?.favouriteGenre.isEmpty ?? true) ? '—' : appUser!.favouriteGenre, icon: Icons.music_note),
+                                ]),
+                                const SizedBox(height: 24),
+
+                                _sectionLabel('Friends'),
+                                const SizedBox(height: 10),
+                                _friendsCard(user.uid),
+                                const SizedBox(height: 24),
+
+                                _sectionLabel('Clubs visited'),
+                                const SizedBox(height: 10),
+                                _clubsCard(appUser?.clubsVisited ?? []),
+                              ],
+                            ),
+                          ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -242,9 +232,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _avatarCard(String displayName) {
-    final photoUrl = _appUser?.photoUrl;
-
+  Widget _avatarCard(String displayName, String? photoUrl, String username) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -268,7 +256,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 3),
               Text(
-                (_appUser?.username.isNotEmpty ?? false) ? '@${_appUser!.username}' : '',
+                username.isNotEmpty ? '@$username' : '',
                 style: const TextStyle(color: kMuted, fontSize: 13, fontWeight: FontWeight.w600),
               ),
             ],
@@ -317,11 +305,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _friendsCard(String currentUid) {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('users')
-          .doc(currentUid)
-          .collection('friends')
-          .snapshots(),
+      stream: FriendService().friendsStream(currentUid),
       builder: (context, snapshot) {
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           return Container(
@@ -395,8 +379,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _clubsCard() {
-    final clubs = _appUser?.clubsVisited ?? [];
+  Widget _clubsCard(List<String> clubs) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),

@@ -2,12 +2,13 @@ import 'dart:typed_data';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:after_hours/theme/app_theme.dart';
+import 'package:after_hours/services/auth_service.dart';
 import 'package:after_hours/services/user_service.dart';
 import 'package:after_hours/services/post_service.dart';
+import 'package:after_hours/widgets/primary_button.dart';
+import 'package:after_hours/utils/time_format.dart';
 
 class CreatePostScreen extends StatefulWidget {
   const CreatePostScreen({super.key});
@@ -46,13 +47,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     return end.difference(start).inMinutes / 60.0;
   }
 
-  String _formatTime(TimeOfDay t) {
-    final h  = t.hourOfPeriod == 0 ? 12 : t.hourOfPeriod;
-    final m  = t.minute.toString().padLeft(2, '0');
-    final pm = t.period == DayPeriod.pm ? 'PM' : 'AM';
-    return '$h:$m $pm';
-  }
-
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -81,7 +75,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       builder: (ctx) => Container(
         height: 300,
         decoration: const BoxDecoration(
-          color: Color(0xFF130228),
+          color: kSheet,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: Column(
@@ -133,7 +127,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   Future<void> _pickImage() async {
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
-      backgroundColor: const Color(0xFF130228),
+      backgroundColor: const kSheet,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -167,13 +161,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     if (picked != null) setState(() => _imageFile = picked);
   }
 
-  Future<String> _uploadImage(String uid) async {
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final ref = FirebaseStorage.instance.ref('posts/$uid/$timestamp.jpg');
-    await ref.putData(await _imageFile!.readAsBytes());
-    return ref.getDownloadURL();
-  }
-
   Future<void> _submit() async {
     final caption = _captionController.text.trim();
     if (caption.isEmpty) {
@@ -191,11 +178,11 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     }
 
     if (_rating == 0) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content: Text('Please rate your night.')),
-  );
-  return;
-}
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please rate your night.')),
+      );
+      return;
+    }
 
     if (_venueController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -207,22 +194,25 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     setState(() => _submitting = true);
 
     try {
-      final user        = FirebaseAuth.instance.currentUser;
+      final user = AuthService().currentUser;
       if (user == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Session expired — please sign in again.')),
         );
         return;
       }
-      final displayName = user.displayName ?? user.email?.split('@').first ?? 'Raver';
+      final displayName = AuthService().currentDisplayName;
       final appUser     = await UserService().getUser(user.uid);
       final username    = appUser?.username ?? '';
       final isPublic    = appUser?.isPublic ?? true;
       final venue       = _venueController.text.trim();
-      final hours    = _hoursOut();
-      final imageUrl = _imageFile != null ? await _uploadImage(user.uid) : '';
+      final hours       = _hoursOut();
+      final postService = PostService();
+      final imageUrl    = _imageFile != null
+          ? await postService.uploadPostImage(user.uid, await _imageFile!.readAsBytes())
+          : '';
 
-      await PostService().createPost(
+      await postService.createPost(
         uid:         user.uid,
         displayName: displayName,
         username:    username,
@@ -233,8 +223,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         imageUrl:    imageUrl,
         puked:       _puked,
         nightDate:   '${_date.year}-${_date.month.toString().padLeft(2, '0')}-${_date.day.toString().padLeft(2, '0')}',
-        startTime:   _startTime != null ? _formatTime(_startTime!) : null,
-        endTime:     _endTime   != null ? _formatTime(_endTime!)   : null,
+        startTime:   _startTime != null ? formatTimeOfDay(_startTime!) : null,
+        endTime:     _endTime   != null ? formatTimeOfDay(_endTime!)   : null,
         hoursOut:    hours,
         isPublic:    isPublic,
       );
@@ -321,11 +311,11 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                                 value: '${_date.day}/${_date.month}/${_date.year}', onTap: _pickDate),
                             const Divider(height: 22, color: kBorder),
                             _timeRow(icon: Icons.login, label: 'Arrived',
-                                value: _startTime != null ? _formatTime(_startTime!) : 'Tap to set',
+                                value: _startTime != null ? formatTimeOfDay(_startTime!) : 'Tap to set',
                                 onTap: () => _pickTime(true)),
                             const Divider(height: 22, color: kBorder),
                             _timeRow(icon: Icons.logout, label: 'Left',
-                                value: _endTime != null ? _formatTime(_endTime!) : 'Tap to set',
+                                value: _endTime != null ? formatTimeOfDay(_endTime!) : 'Tap to set',
                                 onTap: () => _pickTime(false)),
                             if (hours > 0)
                               Padding(
@@ -507,23 +497,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                             ),
                       const SizedBox(height: 28),
 
-                      SizedBox(
-                        width: double.infinity,
+                      PrimaryButton(
+                        label: 'POST TO FEED',
+                        onPressed: _submitting ? null : _submit,
                         height: 58,
-                        child: Container(
-                          decoration: kPrimaryButtonDecoration,
-                          child: ElevatedButton(
-                            onPressed: _submitting ? null : _submit,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.transparent,
-                              shadowColor: Colors.transparent,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                              textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: 0.4),
-                            ),
-                            child: const Text('POST TO FEED'),
-                          ),
-                        ),
                       ),
                     ],
                   ),
@@ -540,11 +517,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: kSurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: kBorder),
-      ),
+      decoration: kCardDecoration,
       child: child,
     );
   }

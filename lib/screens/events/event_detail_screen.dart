@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/models/event.dart';
 import 'package:after_hours/models/user.dart';
+import 'package:after_hours/services/auth_service.dart';
 import 'package:after_hours/services/attendance_service.dart';
 import 'package:after_hours/services/user_service.dart';
 import 'package:after_hours/services/friend_service.dart';
@@ -258,7 +258,7 @@ Future<void> _launchBookingUrl(BuildContext context) async {
 
   Widget _attendanceSection(BuildContext context) {
     if (event.id.isEmpty) return const SizedBox.shrink();
-    final currentUid = FirebaseAuth.instance.currentUser?.uid;
+    final currentUid = AuthService().currentUid;
 
     return StreamBuilder<List<String>>(
       stream: AttendanceService().attendeeUidsStream(event.id),
@@ -284,73 +284,11 @@ Future<void> _launchBookingUrl(BuildContext context) async {
               ),
               if (uids.isNotEmpty) ...[
                 const SizedBox(height: 14),
-                FutureBuilder<List<AppUser>>(
-                  future: UserService().getUsers(uids.take(5).toList()),
-                  builder: (context, userSnap) {
-                    if (!userSnap.hasData) {
-                      return const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 8),
-                        child: Center(child: CircularProgressIndicator(color: kAccent, strokeWidth: 2)),
-                      );
-                    }
-
-                    final users = userSnap.data!;
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ...users.map((user) => Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: Row(
-                                children: [
-                                  UserAvatar(photoUrl: user.photoUrl, displayName: user.name, radius: 16),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      user.name,
-                                      style: const TextStyle(color: Colors.white, fontSize: 14),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  if (user.uid != currentUid)
-                                    FutureBuilder<bool>(
-                                      future: FriendService().isFriend(currentUid ?? '', user.uid),
-                                      builder: (context, friendSnap) {
-                                        if (!friendSnap.hasData || !friendSnap.data!) return const SizedBox.shrink();
-                                        return TextButton(
-                                          onPressed: () async {
-                                            await ChatService().getOrCreateChat(currentUid!, user.uid);
-                                            if (!context.mounted) return;
-                                            Navigator.of(context).push(
-                                              MaterialPageRoute(
-                                                builder: (_) => ChatScreen(
-                                                  otherUid: user.uid,
-                                                  otherDisplayName: user.name,
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                          child: const Text('Message', style: TextStyle(color: kAccent, fontSize: 13, fontWeight: FontWeight.w700)),
-                                        );
-                                      },
-                                    ),
-                                ],
-                              ),
-                            )),
-                        if (uids.length > 5)
-                          GestureDetector(
-                            onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => AttendeeListScreen(eventId: event.id, eventName: event.name),
-                              ),
-                            ),
-                            child: Text(
-                              'See all ${uids.length}',
-                              style: const TextStyle(color: kAccent, fontSize: 13, fontWeight: FontWeight.w700),
-                            ),
-                          ),
-                      ],
-                    );
-                  },
+                _AttendeePreview(
+                  uids: uids,
+                  currentUid: currentUid,
+                  eventId: event.id,
+                  eventName: event.name,
                 ),
               ],
             ],
@@ -514,4 +452,145 @@ Future<void> _launchBookingUrl(BuildContext context) async {
       ),
     );
   }
+}
+
+class _AttendeePreview extends StatefulWidget {
+  final List<String> uids;
+  final String? currentUid;
+  final String eventId;
+  final String eventName;
+
+  const _AttendeePreview({
+    required this.uids,
+    required this.currentUid,
+    required this.eventId,
+    required this.eventName,
+  });
+
+  @override
+  State<_AttendeePreview> createState() => _AttendeePreviewState();
+}
+
+class _AttendeePreviewState extends State<_AttendeePreview> {
+  late Future<_AttendeeData> _dataFuture;
+  List<String>? _lastUids;
+
+  @override
+  void initState() {
+    super.initState();
+    _dataFuture = _fetchData();
+    _lastUids = List.from(widget.uids);
+  }
+
+  @override
+  void didUpdateWidget(_AttendeePreview old) {
+    super.didUpdateWidget(old);
+    final previewUids = widget.uids.take(5).toList();
+    final oldPreviewUids = (_lastUids ?? []).take(5).toList();
+    if (!_listEquals(previewUids, oldPreviewUids)) {
+      _dataFuture = _fetchData();
+      _lastUids = List.from(widget.uids);
+    }
+  }
+
+  bool _listEquals(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
+  Future<_AttendeeData> _fetchData() async {
+    final previewUids = widget.uids.take(5).toList();
+    final users = await UserService().getUsers(previewUids);
+
+    final friendSet = <String>{};
+    if (widget.currentUid != null) {
+      final checks = await Future.wait(
+        users
+            .where((u) => u.uid != widget.currentUid)
+            .map((u) => FriendService().isFriend(widget.currentUid!, u.uid)),
+      );
+      var i = 0;
+      for (final u in users.where((u) => u.uid != widget.currentUid)) {
+        if (checks[i]) friendSet.add(u.uid);
+        i++;
+      }
+    }
+
+    return _AttendeeData(users: users, friends: friendSet);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<_AttendeeData>(
+      future: _dataFuture,
+      builder: (context, snap) {
+        if (!snap.hasData) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Center(child: CircularProgressIndicator(color: kAccent, strokeWidth: 2)),
+          );
+        }
+
+        final data = snap.data!;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ...data.users.map((user) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Row(
+                    children: [
+                      UserAvatar(photoUrl: user.photoUrl, displayName: user.name, radius: 16),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          user.name,
+                          style: const TextStyle(color: Colors.white, fontSize: 14),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (user.uid != widget.currentUid && data.friends.contains(user.uid))
+                        TextButton(
+                          onPressed: () async {
+                            await ChatService().getOrCreateChat(widget.currentUid!, user.uid);
+                            if (!context.mounted) return;
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => ChatScreen(
+                                  otherUid: user.uid,
+                                  otherDisplayName: user.name,
+                                ),
+                              ),
+                            );
+                          },
+                          child: const Text('Message', style: TextStyle(color: kAccent, fontSize: 13, fontWeight: FontWeight.w700)),
+                        ),
+                    ],
+                  ),
+                )),
+            if (widget.uids.length > 5)
+              GestureDetector(
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => AttendeeListScreen(eventId: widget.eventId, eventName: widget.eventName),
+                  ),
+                ),
+                child: Text(
+                  'See all ${widget.uids.length}',
+                  style: const TextStyle(color: kAccent, fontSize: 13, fontWeight: FontWeight.w700),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _AttendeeData {
+  final List<AppUser> users;
+  final Set<String> friends;
+  const _AttendeeData({required this.users, required this.friends});
 }

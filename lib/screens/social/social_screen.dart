@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:after_hours/theme/app_theme.dart';
@@ -8,6 +7,11 @@ import 'package:after_hours/screens/social/create_post_screen.dart';
 import 'package:after_hours/widgets/navigation_helper.dart';
 import 'package:after_hours/screens/social/comments_sheet.dart';
 import 'package:after_hours/screens/social/user_search_screen.dart';
+import 'package:after_hours/services/post_service.dart';
+import 'package:after_hours/widgets/user_avatar.dart';
+import 'package:after_hours/utils/time_format.dart';
+import 'dart:async';
+import 'package:after_hours/services/auth_service.dart';
 
 class SocialScreen extends StatefulWidget {
   const SocialScreen({super.key});
@@ -17,18 +21,24 @@ class SocialScreen extends StatefulWidget {
 }
 
 class _SocialScreenState extends State<SocialScreen> {
-  // which docs passed the visibility check and should be shown in the feed
   List<QueryDocumentSnapshot> _visibleDocs = [];
-
   String? _currentUid;
   bool _initialLoad = true;
   bool _hasError = false;
 
+  StreamSubscription? _feedSub;
+
   @override
   void initState() {
     super.initState();
-    _currentUid = FirebaseAuth.instance.currentUser?.uid;
+    _currentUid = AuthService().currentUid;
     _subscribeToPosts();
+  }
+
+  @override
+  void dispose() {
+    _feedSub?.cancel();
+    super.dispose();
   }
 
   void _subscribeToPosts() {
@@ -37,62 +47,12 @@ class _SocialScreenState extends State<SocialScreen> {
       return;
     }
 
-    // two separate queries that Firestore rules can evaluate without exists() calls:
-    // 1) all public posts, 2) the current user's own posts (which may be private)
-    final publicStream = FirebaseFirestore.instance
-        .collection('posts')
-        .where('is_public', isEqualTo: true)
-        .orderBy('created_at', descending: true)
-        .limit(50)
-        .snapshots();
-
-    final ownStream = FirebaseFirestore.instance
-        .collection('posts')
-        .where('uid', isEqualTo: _currentUid)
-        .orderBy('created_at', descending: true)
-        .limit(50)
-        .snapshots();
-
-    // hold the latest snapshot from each stream so we can merge them
-    QuerySnapshot? latestPublic;
-    QuerySnapshot? latestOwn;
-
-    void merge() {
-      final publicDocs = latestPublic?.docs ?? [];
-      final ownDocs    = latestOwn?.docs   ?? [];
-
-      // combine, deduplicate by doc ID (own posts also appear in public stream
-      // if the user is public), then sort newest-first
-      final seen = <String>{};
-      final merged = <QueryDocumentSnapshot>[];
-      for (final doc in [...publicDocs, ...ownDocs]) {
-        if (seen.add(doc.id)) merged.add(doc);
-      }
-      merged.sort((a, b) {
-        final at = (a.data() as Map<String, dynamic>)['created_at'] as Timestamp?;
-        final bt = (b.data() as Map<String, dynamic>)['created_at'] as Timestamp?;
-        if (at == null && bt == null) return 0;
-        if (at == null) return 1;
-        if (bt == null) return -1;
-        return bt.compareTo(at);
-      });
-
-      if (mounted) setState(() { _visibleDocs = merged; _initialLoad = false; });
-    }
-
-    // listen to both; each time either fires, re-merge and rebuild
-    publicStream.listen(
-      (snap) { latestPublic = snap; merge(); },
-      onError: (e) {
-        print('SOCIAL FEED ERROR: $e');
-        if (mounted) setState(() { _hasError = true; _initialLoad = false; });
+    _feedSub = PostService().feedStream(_currentUid!).listen(
+      (docs) {
+        if (mounted) setState(() { _visibleDocs = docs; _initialLoad = false; });
       },
-    );
-
-    ownStream.listen(
-      (snap) { latestOwn = snap; merge(); },
       onError: (e) {
-        print('SOCIAL OWN ERROR: $e');
+        debugPrint('social feed error: $e');
         if (mounted) setState(() { _hasError = true; _initialLoad = false; });
       },
     );
@@ -220,30 +180,16 @@ class _PostCard extends StatefulWidget {
 
 class _PostCardState extends State<_PostCard> {
   bool get _liked {
-    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final uid = AuthService().currentUid ?? '';
     return List<String>.from(widget.data['likes'] ?? []).contains(uid);
   }
 
   int get _likeCount => (widget.data['likes'] as List?)?.length ?? 0;
 
   Future<void> _toggleLike() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = AuthService().currentUid;
     if (uid == null) return;
-    final ref = FirebaseFirestore.instance.collection('posts').doc(widget.postId);
-    if (_liked) {
-      await ref.update({'likes': FieldValue.arrayRemove([uid])});
-    } else {
-      await ref.update({'likes': FieldValue.arrayUnion([uid])});
-    }
-  }
-
-  String _timeAgo(Timestamp? ts) {
-    if (ts == null) return '';
-    final diff = DateTime.now().difference(ts.toDate());
-    if (diff.inMinutes < 1) return 'now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24)   return '${diff.inHours}h ago';
-    return '${diff.inDays}d ago';
+    await PostService().toggleLike(widget.postId, uid, _liked);
   }
 
   @override
@@ -265,11 +211,7 @@ class _PostCardState extends State<_PostCard> {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: kSurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: kBorder),
-      ),
+      decoration: kCardDecoration,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -277,13 +219,10 @@ class _PostCardState extends State<_PostCard> {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             child: Row(
               children: [
-                CircleAvatar(
+                UserAvatar(
+                  displayName: displayName,
+                  photoUrl: data['photo_url'] as String?,
                   radius: 20,
-                  backgroundColor: kAccent.withValues(alpha: 0.3),
-                  child: Text(
-                    (displayName.isEmpty ? '?' : displayName[0]).toUpperCase(),
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16),
-                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -293,7 +232,7 @@ class _PostCardState extends State<_PostCard> {
                       Text(displayName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
                       if (username.isNotEmpty)
                         Text('@$username', style: const TextStyle(color: kMuted, fontSize: 12, fontWeight: FontWeight.w500)),
-                      Text(_timeAgo(ts), style: const TextStyle(color: kDim, fontSize: 11)),
+                      Text(timeAgo(ts), style: const TextStyle(color: kDim, fontSize: 11)),
                     ],
                   ),
                 ),

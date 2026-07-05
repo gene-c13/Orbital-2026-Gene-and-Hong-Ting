@@ -47,6 +47,23 @@ const kPrimaryButtonDecoration = BoxDecoration(
   boxShadow: [BoxShadow(color: Color(0x66FF2D95), blurRadius: 24, spreadRadius: 1)],
 );
 
+// ── Surface card (posts, event cards, profile sections, etc.) ─────────────────
+const kCardDecoration = BoxDecoration(
+  color: kSurface,
+  borderRadius: BorderRadius.all(Radius.circular(16)),
+  border: Border.fromBorderSide(BorderSide(color: kBorder)),
+);
+
+// ── Bottom sheet background colour ───────────────────────────────────────────
+const Color kSheet = Color(0xFF130228);
+
+// ── Music genres list ─────────────────────────────────────────────────────────
+const kGenres = <String>[
+  'House', 'Techno', 'Drum & Bass', 'Hip-Hop', 'R&B',
+  'Afrobeats', 'Garage', 'Trance', 'Disco', 'Jungle',
+  'Dubstep', 'Pop', 'Reggaeton', 'Latin', 'Other',
+];
+
 // ── Bottom nav ────────────────────────────────────────────────────────────────
 const kNavItems = <BottomNavigationBarItem>[
   BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: 'Events'),

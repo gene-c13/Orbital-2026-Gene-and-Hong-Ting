@@ -4,12 +4,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/services/user_service.dart';
-
-const _genres = [
-  'House', 'Techno', 'Drum & Bass', 'Hip-Hop', 'R&B',
-  'Afrobeats', 'Garage', 'Trance', 'Disco', 'Jungle',
-  'Dubstep', 'Pop', 'Reggaeton', 'Latin', 'Other',
-];
+import 'package:after_hours/widgets/app_text_field.dart';
+import 'package:after_hours/widgets/primary_button.dart';
 
 class EditProfileSheet extends StatefulWidget {
   final String  initialName;
@@ -68,7 +64,7 @@ class _EditProfileSheetState extends State<EditProfileSheet> {
   Future<void> _pickAvatar() async {
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
-      backgroundColor: const Color(0xFF130228),
+      backgroundColor: kSheet,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -112,7 +108,7 @@ class _EditProfileSheetState extends State<EditProfileSheet> {
   void _showGenrePicker() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF130228),
+      backgroundColor: kSheet,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -136,7 +132,7 @@ class _EditProfileSheetState extends State<EditProfileSheet> {
           Flexible(
             child: ListView(
               shrinkWrap: true,
-              children: _genres.map((genre) {
+              children: kGenres.map((genre) {
                 final selected = genre == _selectedGenre;
                 return ListTile(
                   title: Text(
@@ -211,7 +207,7 @@ Future<void> _save() async {
       builder: (ctx, scrollController) {
         return Container(
           decoration: const BoxDecoration(
-            color: Color(0xFF130228),
+            color: kSheet,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
           child: Column(
@@ -272,7 +268,7 @@ Future<void> _save() async {
                                 decoration: BoxDecoration(
                                   color: kAccent,
                                   shape: BoxShape.circle,
-                                  border: Border.all(color: const Color(0xFF130228), width: 2),
+                                  border: Border.all(color: kSheet, width: 2),
                                 ),
                                 child: const Icon(Icons.camera_alt, color: Colors.white, size: 14),
                               ),
@@ -295,11 +291,7 @@ Future<void> _save() async {
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 17),
-                      decoration: BoxDecoration(
-                        color: kSurface,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: kBorder),
-                      ),
+                      decoration: kCardDecoration,
                       child: Row(
                         children: [
                           const Icon(Icons.alternate_email, color: kDim, size: 20),
@@ -318,7 +310,7 @@ Future<void> _save() async {
                     const SizedBox(height: 22),
                     _fieldLabel('DISPLAY NAME *'),
                     const SizedBox(height: 8),
-                    _inputField(
+                    AppTextField(
                       controller:     _nameController,
                       hint:           'e.g. Alex',
                       icon:           Icons.person_outline,
@@ -371,11 +363,7 @@ Future<void> _save() async {
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                      decoration: BoxDecoration(
-                        color: kSurface,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: kBorder),
-                      ),
+                      decoration: kCardDecoration,
                       child: Row(
                         children: [
                           Icon(
@@ -413,7 +401,7 @@ Future<void> _save() async {
                     const SizedBox(height: 22),
                     _fieldLabel('FAVOURITE VENUE'),
                     const SizedBox(height: 8),
-                    _inputField(
+                    AppTextField(
                       controller: _venueController,
                       hint:       'e.g. Fabric, Printworks...',
                       icon:       Icons.location_on_outlined,
@@ -421,33 +409,14 @@ Future<void> _save() async {
                     ),
                     const SizedBox(height: 40),
 
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: AnimatedOpacity(
-                        duration: const Duration(milliseconds: 200),
-                        opacity: nameReady ? 1.0 : 0.4,
-                        child: Container(
-                          decoration: kPrimaryButtonDecoration,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.transparent,
-                              shadowColor:     Colors.transparent,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                              textStyle: const TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: 0.4,
-                              ),
-                            ),
-                            onPressed: (_submitting || !nameReady) ? null : _save,
-                            child: _submitting
-                                ? const SizedBox(
-                                    width: 22, height: 22,
-                                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                                  )
-                                : const Text('SAVE CHANGES'),
-                          ),
-                        ),
+                    AnimatedOpacity(
+                      duration: const Duration(milliseconds: 200),
+                      opacity: nameReady ? 1.0 : 0.4,
+                      child: PrimaryButton(
+                        label: 'SAVE CHANGES',
+                        onPressed: (_submitting || !nameReady) ? null : _save,
+                        loading: _submitting,
+                        height: 56,
                       ),
                     ),
                   ],
@@ -467,45 +436,4 @@ Future<void> _save() async {
     ),
   );
 
-  Widget _inputField({
-    required TextEditingController controller,
-    required String  hint,
-    required IconData icon,
-    TextCapitalization  capitalization = TextCapitalization.none,
-    TextInputAction     action         = TextInputAction.next,
-    ValueChanged<String>? onChanged,
-    ValueChanged<String>? onSubmitted,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color:  kSurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0x44B14EFF)),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-      child: Row(
-        children: [
-          Icon(icon, color: kAccent, size: 22),
-          const SizedBox(width: 12),
-          Expanded(
-            child: TextField(
-              controller:           controller,
-              textCapitalization:   capitalization,
-              textInputAction:      action,
-              onChanged:            onChanged,
-              onSubmitted:          onSubmitted,
-              style:                const TextStyle(color: Colors.white, fontSize: 16),
-              cursorColor:          kAccent,
-              decoration: InputDecoration(
-                hintText:       hint,
-                hintStyle:      const TextStyle(color: kDim, fontSize: 16),
-                border:         InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 16),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }

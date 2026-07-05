@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/services/chat_service.dart';
+import 'package:after_hours/utils/time_format.dart';
 
 class ChatScreen extends StatefulWidget {
   final String otherUid;
@@ -69,15 +70,6 @@ class _ChatScreenState extends State<ChatScreen> {
         );
       }
     });
-  }
-
-  String _timeLabel(Timestamp? ts) {
-    if (ts == null) return '';
-    final dt = ts.toDate();
-    final h  = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
-    final m  = dt.minute.toString().padLeft(2, '0');
-    final period = dt.hour >= 12 ? 'PM' : 'AM';
-    return '$h:$m $period';
   }
 
   @override
@@ -180,7 +172,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        _timeLabel(ts),
+                                        chatTimeLabel(ts),
                                         style: TextStyle(
                                           color: Colors.white.withValues(alpha: 0.5),
                                           fontSize: 10,

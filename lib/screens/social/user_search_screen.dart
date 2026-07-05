@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:after_hours/services/friend_service.dart';
+import 'package:after_hours/services/user_service.dart';
 import 'package:after_hours/models/user.dart';
 import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/widgets/user_avatar.dart';
@@ -56,28 +56,17 @@ class _UserSearchScreenState extends State<UserSearchScreen> {
     _lastQuery = query;
 
     try {
-      // \uf8ff is a very high unicode character, so anything starting with
-      // query will fall between query and query+\uf8ff \u2014 Firestore's way of doing a "starts with" search
-      final snapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .where('username', isGreaterThanOrEqualTo: query)
-          .where('username', isLessThanOrEqualTo: '$query\uf8ff')
-          .limit(8)
-          .get();
+      final all = await UserService().searchByUsernamePrefix(query);
 
-      if (query != _lastQuery) return; // a newer search is already running
+      if (query != _lastQuery) return; // a newer search already in flight
 
-      final results = snapshot.docs
-          .map((doc) => AppUser.fromFirestore(doc.data(), doc.id))
-          .where((user) => user.uid != _currentUid)
-          .toList();
+      final results = all.where((u) => u.uid != _currentUid).toList();
 
       if (!mounted) return;
       setState(() => _results = results);
     } catch (_) {
       // search failed silently, results stay empty
     } finally {
-      // always clear the spinner, even if an error or early return happened
       if (mounted) setState(() => _loading = false);
     }
   }

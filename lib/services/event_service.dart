@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 import 'package:after_hours/models/event.dart';
 
 class EventService {
@@ -14,22 +15,17 @@ class EventService {
         .map((snap) => snap.docs.map((d) => Event.fromFirestore(d.data() as Map<String, dynamic>, d.id)).toList());
   }
 
-  Future<int> getEventCountForDate(String date) async {
-    final snap = await _eventsCollection.where('date', isEqualTo: date).get();
-    return snap.docs.length;
-  }
-
   Stream<List<Event>> getAllEventsStream() {
-  final today = DateTime.now().toUtc().add(const Duration(hours: 8)); // SGT = UTC+8
-  final todayKey = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    final sgt = DateTime.now().toUtc().add(const Duration(hours: 8));
+    final todayKey = DateFormat('yyyy-MM-dd').format(sgt);
 
-  return _eventsCollection
-      .where('date', isGreaterThanOrEqualTo: todayKey)
-      .orderBy('date')
-      .orderBy('sort_order')
-      .snapshots()
-      .map((snap) => snap.docs
-          .map((d) => Event.fromFirestore(d.data() as Map<String, dynamic>, d.id))
-          .toList());
+    return _eventsCollection
+        .where('date', isGreaterThanOrEqualTo: todayKey)
+        .orderBy('date')
+        .orderBy('sort_order')
+        .snapshots()
+        .map((snap) => snap.docs
+            .map((d) => Event.fromFirestore(d.data() as Map<String, dynamic>, d.id))
+            .toList());
   }
 }

@@ -1,14 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:after_hours/theme/app_theme.dart';
+import 'package:after_hours/services/auth_service.dart';
 import 'package:after_hours/screens/events/events_screen.dart';
-
-const _genres = [
-  'House', 'Techno', 'Drum & Bass', 'Hip-Hop', 'R&B',
-  'Afrobeats', 'Garage', 'Trance', 'Disco', 'Jungle',
-  'Dubstep', 'Pop', 'Reggaeton', 'Latin', 'Other',
-];
+import 'package:after_hours/widgets/app_text_field.dart';
+import 'package:after_hours/widgets/primary_button.dart';
 
 class UsernameSetupScreen extends StatefulWidget {
   const UsernameSetupScreen({super.key});
@@ -41,14 +36,11 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
     setState(() => _submitting = true);
 
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) { _snack('Session expired — please sign in again.'); return; }
-      await user.updateDisplayName(name);
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-        'display_name':    name,
-        'favourite_venue': venue,
-        'favourite_genre': _selectedGenre ?? '',
-      }, SetOptions(merge: true));
+      await AuthService().completeProfileSetup(
+        displayName: name,
+        favouriteVenue: venue,
+        favouriteGenre: _selectedGenre,
+      );
 
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
@@ -56,7 +48,11 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      _snack('Failed to save: $e');
+      if (e.toString().contains('no_user')) {
+        _snack('Session expired — please sign in again.');
+      } else {
+        _snack('Failed to save: $e');
+      }
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -68,7 +64,7 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
   void _showGenrePicker() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF130228),
+      backgroundColor: kSheet,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -92,7 +88,7 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
           Flexible(
             child: ListView(
               shrinkWrap: true,
-              children: _genres.map((genre) {
+              children: kGenres.map((genre) {
                 final selected = genre == _selectedGenre;
                 return ListTile(
                   title: Text(
@@ -150,7 +146,7 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
 
                 _fieldLabel('Your name *'),
                 const SizedBox(height: 8),
-                _inputField(
+                AppTextField(
                   controller: _nameController,
                   hint: 'e.g. Alex',
                   icon: Icons.person_outline,
@@ -162,7 +158,7 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
 
                 _fieldLabel('Favourite venue'),
                 const SizedBox(height: 8),
-                _inputField(
+                AppTextField(
                   controller: _venueController,
                   hint: 'e.g. Fabric, Printworks...',
                   icon: Icons.location_on_outlined,
@@ -212,37 +208,14 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
 
                 const Spacer(),
 
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: AnimatedOpacity(
-                    duration: const Duration(milliseconds: 200),
-                    opacity: nameReady ? 1.0 : 0.4,
-                    child: Container(
-                      decoration: kPrimaryButtonDecoration,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          shadowColor: Colors.transparent,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        ),
-                        onPressed: _submitting ? null : _save,
-                        child: _submitting
-                            ? const SizedBox(
-                                width: 22, height: 22,
-                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                              )
-                            : const Text(
-                                "Let's go →",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                      ),
-                    ),
+                AnimatedOpacity(
+                  duration: const Duration(milliseconds: 200),
+                  opacity: nameReady ? 1.0 : 0.4,
+                  child: PrimaryButton(
+                    label: "Let's go →",
+                    onPressed: _save,
+                    loading: _submitting,
+                    height: 56,
                   ),
                 ),
               ],
@@ -258,45 +231,4 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
     style: const TextStyle(color: kMuted, fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: 0.4),
   );
 
-  Widget _inputField({
-    required TextEditingController controller,
-    required String hint,
-    required IconData icon,
-    TextCapitalization capitalization = TextCapitalization.none,
-    TextInputAction action = TextInputAction.next,
-    ValueChanged<String>? onChanged,
-    ValueChanged<String>? onSubmitted,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: kSurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0x44B14EFF)),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-      child: Row(
-        children: [
-          Icon(icon, color: kAccent, size: 22),
-          const SizedBox(width: 12),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              textCapitalization: capitalization,
-              textInputAction: action,
-              onChanged: onChanged,
-              onSubmitted: onSubmitted,
-              style: const TextStyle(color: Colors.white, fontSize: 16),
-              cursorColor: kAccent,
-              decoration: InputDecoration(
-                hintText: hint,
-                hintStyle: const TextStyle(color: kDim, fontSize: 16),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 16),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }

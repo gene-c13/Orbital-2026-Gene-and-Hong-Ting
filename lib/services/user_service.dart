@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:after_hours/models/user.dart';
-import 'package:after_hours/services/friend_service.dart';
 
 /// Centralises reads and writes of the `users` collection so screens work
 /// with typed [AppUser] objects instead of raw Firestore maps (same role
@@ -42,6 +41,18 @@ class UserService {
     return users;
   }
 
+  Future<List<AppUser>> searchByUsernamePrefix(String query) async {
+    // upper bound  is the highest private-use unicode char, so usernames starting with query fall within the range
+    final snap = await _usersCollection
+        .where('username', isGreaterThanOrEqualTo: query)
+        .where('username', isLessThanOrEqualTo: '$query')
+        .limit(8)
+        .get();
+    return snap.docs
+        .map((doc) => AppUser.fromFirestore(doc.data() as Map<String, dynamic>, doc.id))
+        .toList();
+  }
+
   Future<String> _uploadAvatar(String uid, Uint8List bytes) async {
     final ref = FirebaseStorage.instance.ref('avatars/$uid.jpg');
     await ref.putData(bytes);
@@ -78,18 +89,5 @@ class UserService {
     if (photoUrl != null) data['photo_url'] = photoUrl;
 
     await _usersCollection.doc(uid).set(data, SetOptions(merge: true));
-  }
-
-  /// Whether [currentUid] should be allowed to see a post authored by
-  /// [authorUid]: always true for your own posts, true if the author's
-  /// profile is public, otherwise gated on the existing friends
-  /// relationship (a stand-in until following/followers exists).
-  Future<bool> isPostVisible(String currentUid, String authorUid) async {
-    if (authorUid == currentUid) return true;
-
-    final author = await getUser(authorUid);
-    if (author == null || author.isPublic) return true;
-
-    return FriendService().isFriend(currentUid, authorUid);
   }
 }

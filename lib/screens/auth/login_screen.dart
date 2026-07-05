@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:after_hours/theme/app_theme.dart';
+import 'package:after_hours/services/auth_service.dart';
 import 'package:after_hours/screens/events/events_screen.dart';
 import 'package:after_hours/screens/auth/register_screen.dart';
 import 'package:after_hours/screens/auth/email_verification_screen.dart';
 import 'package:after_hours/screens/auth/username_setup_screen.dart';
+import 'package:after_hours/widgets/primary_button.dart';
 
 class LoginScreen extends StatefulWidget { //stateful to track state (error?user typing?)
   const LoginScreen({super.key});
@@ -19,34 +21,33 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
   bool _submitting = false;
 
-  Future<void> _signIn() async { //backend:this function wires signin button to firebase
+  Future<void> _signIn() async {
     if (_submitting) return;
     setState(() => _submitting = true);
     try {
-      final credential = await FirebaseAuth.instance.signInWithEmailAndPassword( //send email and pass to firebase & wait for response
+      final auth = AuthService();
+      final user = await auth.signIn(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
-      if (!mounted) return; //if screen close eg.user navigated to another screen, stop, dont continue.
+      if (!mounted) return;
 
-      final user = credential.user; //credential is a UserCredential object with credential.user which contains info of the user account like email
       if (user != null && !user.emailVerified) {
-        await user.sendEmailVerification();
+        await auth.sendVerification();
         if (!mounted) return;
-        Navigator.of(context).pushReplacement( //if user's email is not verified, this navigates to a new screen and remove current one from stack. user cant press back to login 
-          MaterialPageRoute(builder: (_) => const EmailVerificationScreen()), //definess the screen to navigate to
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const EmailVerificationScreen()),
         );
         return;
       }
 
-      final hasName = (user?.displayName ?? '').isNotEmpty; //null safe access, not ternary operator. if user itself is null, dont crash, return null. if displayname is null, return empty string not null
-      Navigator.of(context).pushReplacement( //xxx.of(context) means search for the xxx upward from my position in the tree of widgets. its the standard signature.
+      Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (_) => hasName ? const EventsScreen() : const UsernameSetupScreen(),
-        ),  // if hasName, go to EventsScreen, if not, go to UsernameSetup 
+          builder: (_) => auth.hasDisplayName ? const EventsScreen() : const UsernameSetupScreen(),
+        ),
       );
-    } on FirebaseAuthException catch (e) { //if try fails
-      if (!mounted) return; //the await in try could have had the user navigate away so we check if screen still exists
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
       String message = 'Login failed.';
       if (e.code == 'user-not-found' || e.code == 'wrong-password' || e.code == 'invalid-credential') {
         message = 'Incorrect email or password.';
@@ -55,7 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
       } else if (e.code == 'too-many-requests') {
         message = 'Too many attempts. Try again later.';
       }
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message))); //scaffoldmessenger manages snackbars
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -167,29 +168,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       const SizedBox(height: 24),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 52,
-                        child: Container(
-                          decoration: kPrimaryButtonDecoration,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.transparent,
-                              shadowColor: Colors.transparent,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                            ),
-                            onPressed: _submitting ? null : _signIn,
-                            child: const Text(
-                              'Sign In',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                letterSpacing: 1,
-                              ),
-                            ),
-                          ),
-                        ),
+                      PrimaryButton(
+                        label: 'Sign In',
+                        onPressed: _submitting ? null : _signIn,
                       ),
                       const SizedBox(height: 4),
                       Center(

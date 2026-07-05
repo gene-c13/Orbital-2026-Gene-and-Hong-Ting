@@ -1,7 +1,84 @@
+import 'dart:async';
+import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 class PostService {
   final _db = FirebaseFirestore.instance;
+
+  Stream<List<QueryDocumentSnapshot>> feedStream(String uid) {
+    final publicStream = _db
+        .collection('posts')
+        .where('is_public', isEqualTo: true)
+        .orderBy('created_at', descending: true)
+        .limit(50)
+        .snapshots();
+
+    final ownStream = _db
+        .collection('posts')
+        .where('uid', isEqualTo: uid)
+        .orderBy('created_at', descending: true)
+        .limit(50)
+        .snapshots();
+
+    QuerySnapshot? latestPublic;
+    QuerySnapshot? latestOwn;
+
+    List<QueryDocumentSnapshot> merge() {
+      final publicDocs = latestPublic?.docs ?? [];
+      final ownDocs    = latestOwn?.docs   ?? [];
+
+      final seen = <String>{};
+      final merged = <QueryDocumentSnapshot>[];
+      for (final doc in [...publicDocs, ...ownDocs]) {
+        if (seen.add(doc.id)) merged.add(doc);
+      }
+      merged.sort((a, b) {
+        final at = (a.data() as Map<String, dynamic>)['created_at'] as Timestamp?;
+        final bt = (b.data() as Map<String, dynamic>)['created_at'] as Timestamp?;
+        if (at == null && bt == null) return 0;
+        if (at == null) return 1;
+        if (bt == null) return -1;
+        return bt.compareTo(at);
+      });
+      return merged;
+    }
+
+    final controller = StreamController<List<QueryDocumentSnapshot>>.broadcast();
+
+    final publicSub = publicStream.listen(
+      (snap) { latestPublic = snap; controller.add(merge()); },
+      onError: controller.addError,
+    );
+    final ownSub = ownStream.listen(
+      (snap) { latestOwn = snap; controller.add(merge()); },
+      onError: controller.addError,
+    );
+
+    controller.onCancel = () {
+      publicSub.cancel();
+      ownSub.cancel();
+      controller.close();
+    };
+
+    return controller.stream;
+  }
+
+  Stream<QuerySnapshot> commentsStream(String postId) {
+    return _db
+        .collection('posts')
+        .doc(postId)
+        .collection('comments')
+        .orderBy('created_at', descending: false)
+        .snapshots();
+  }
+
+  Future<String> uploadPostImage(String uid, Uint8List bytes) async {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final ref = FirebaseStorage.instance.ref('posts/$uid/$timestamp.jpg');
+    await ref.putData(bytes);
+    return ref.getDownloadURL();
+  }
 
   // creates the post document and updates the user's stats in one atomic batch
   // so a network failure can't leave a post without stats or stats without a post
@@ -60,6 +137,30 @@ class PostService {
       SetOptions(merge: true),
     );
 
+    await batch.commit();
+  }
+
+  Future<void> toggleLike(String postId, String uid, bool currentlyLiked) async {
+    final ref = _db.collection('posts').doc(postId);
+    if (currentlyLiked) {
+      await ref.update({'likes': FieldValue.arrayRemove([uid])});
+    } else {
+      await ref.update({'likes': FieldValue.arrayUnion([uid])});
+    }
+  }
+
+  Future<void> addComment(String postId, String uid, String username, String text) async {
+    final batch = _db.batch();
+    final commentRef = _db.collection('posts').doc(postId).collection('comments').doc();
+    batch.set(commentRef, {
+      'uid': uid,
+      'username': username,
+      'text': text,
+      'created_at': FieldValue.serverTimestamp(),
+    });
+    batch.update(_db.collection('posts').doc(postId), {
+      'comment_count': FieldValue.increment(1),
+    });
     await batch.commit();
   }
 }

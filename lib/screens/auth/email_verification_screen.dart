@@ -2,9 +2,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:after_hours/theme/app_theme.dart';
+import 'package:after_hours/services/auth_service.dart';
 import 'package:after_hours/screens/events/events_screen.dart';
 import 'package:after_hours/screens/auth/username_setup_screen.dart';
 import 'package:after_hours/screens/auth/login_screen.dart';
+import 'package:after_hours/widgets/primary_button.dart';
 
 class EmailVerificationScreen extends StatefulWidget {
   const EmailVerificationScreen({super.key});
@@ -36,14 +38,15 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   Future<void> _checkVerified({bool auto = false}) async {
     if (!auto) setState(() => _checking = true);
     try {
-      await FirebaseAuth.instance.currentUser?.reload();
-      final verified = FirebaseAuth.instance.currentUser?.emailVerified ?? false;
+      final auth = AuthService();
+      final verified = await auth.checkEmailVerified();
       if (verified && mounted) {
         _pollTimer?.cancel();
-        final hasName = (FirebaseAuth.instance.currentUser?.displayName ?? '').isNotEmpty;
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (_) => hasName ? const EventsScreen() : const UsernameSetupScreen(),
+            builder: (_) => auth.hasDisplayName
+                ? const EventsScreen()
+                : const UsernameSetupScreen(),
           ),
         );
       }
@@ -58,7 +61,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     if (_resendCooldown > 0) return;
     setState(() => _resending = true);
     try {
-      await FirebaseAuth.instance.currentUser?.sendEmailVerification();
+      await AuthService().sendVerification();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Verification email sent!')),
@@ -81,17 +84,17 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   }
 
   Future<void> _signOut() async {
-    await FirebaseAuth.instance.signOut();
+    await AuthService().signOut();
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
-    MaterialPageRoute(builder: (_) => const LoginScreen()),
-    (route) => false,
-);
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (route) => false,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final email = FirebaseAuth.instance.currentUser?.email ?? '';
+    final email = AuthService().currentUser?.email ?? '';
 
     return Scaffold(
       body: Container(
@@ -141,28 +144,10 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                 ),
                 const SizedBox(height: 40),
 
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: Container(
-                    decoration: kPrimaryButtonDecoration,
-                    child: ElevatedButton(
-                      onPressed: _checking ? null : () => _checkVerified(),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        shadowColor: Colors.transparent,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                      child: _checking
-                          ? const SizedBox(
-                              width: 20, height: 20,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                            )
-                          : const Text("I've verified my email"),
-                    ),
-                  ),
+                PrimaryButton(
+                  label: "I've verified my email",
+                  onPressed: () => _checkVerified(),
+                  loading: _checking,
                 ),
                 const SizedBox(height: 12),
 

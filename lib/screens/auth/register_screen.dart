@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; //where profile data lives (we need to write to store)
 import 'package:after_hours/theme/app_theme.dart';
+import 'package:after_hours/services/auth_service.dart';
 import 'package:after_hours/screens/auth/email_verification_screen.dart';
+import 'package:after_hours/widgets/primary_button.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -84,53 +85,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _submitting = true);
 
     try {
-      final db = FirebaseFirestore.instance;
-      final usernameRef = db.collection('usernames').doc(username);
-
-      // Step 1: create the Auth account first.
-      // We can't create an Auth account inside a Firestore transaction, so the
-      // account goes first and we clean it up if anything after it fails.
-      final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      await AuthService().register(
         email: email,
         password: password,
+        username: username,
       );
-      final user = credential.user!;
-
-      // Step 2: claim the username atomically.
-      // The check and the write are inside the same transaction so two people
-      // typing the same name at the same moment both read before either writes —
-      // one of them will see the doc already exists and be rejected.
-      try {
-        await db.runTransaction((tx) async { //tx is a transaction object - you use it instead of db for reads and writes inside the block
-          final snap = await tx.get(usernameRef);
-          if (snap.exists) throw Exception('username_taken'); // abort the transaction
-          tx.set(db.collection('users').doc(user.uid), {
-            'username': username,
-            'hours_this_month':  0,
-            'events_this_month': 0,
-            'puke_count':        0,
-            'total_events':      0,
-            'favourite_venue':   '',
-            'favourite_genre':   '',
-            'clubs_visited':     [],
-          });
-          tx.set(usernameRef, {'uid': user.uid});
-        });
-      } catch (e) {
-        // The Firestore step failed, so roll back by deleting the Auth account
-        // we just created — otherwise it orphans and the user can never re-register
-        // with that email.
-        await user.delete();
-        if (!mounted) return;
-        if (e.toString().contains('username_taken')) {
-          _snack('That username is already taken.');
-        } else {
-          _snack('Registration failed — please try again.');
-        }
-        return;
-      }
-
-      await user.sendEmailVerification();
 
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
@@ -143,9 +102,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
       else if (e.code == 'invalid-email')   { message = "That email doesn't look right."; }
       _snack(message);
     } catch (e) {
-      // catches anything else, e.g. a network error before createUserWithEmailAndPassword
       if (!mounted) return;
-      _snack('Something went wrong. Please try again.');
+      if (e.toString().contains('username_taken')) {
+        _snack('That username is already taken.');
+      } else {
+        _snack('Something went wrong. Please try again.');
+      }
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -250,34 +212,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                     const SizedBox(height: 24),
 
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: Container(
-                        decoration: kPrimaryButtonDecoration,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            shadowColor: Colors.transparent,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          ),
-                          onPressed: _submitting ? null : _submit,
-                          child: _submitting
-                              ? const SizedBox(
-                                  width: 20, height: 20,
-                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                                )
-                              : const Text(
-                                  'Create Account',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                    letterSpacing: 1,
-                                  ),
-                                ),
-                        ),
-                      ),
+                    PrimaryButton(
+                      label: 'Create Account',
+                      onPressed: _submit,
+                      loading: _submitting,
                     ),
                     const SizedBox(height: 4),
 

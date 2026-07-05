@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:after_hours/theme/app_theme.dart';
+import 'package:after_hours/services/auth_service.dart';
+import 'package:after_hours/services/post_service.dart';
+import 'package:after_hours/utils/time_format.dart';
 
 class CommentsSheet extends StatefulWidget {
   final String postId;
@@ -15,11 +17,6 @@ class _CommentsSheetState extends State<CommentsSheet> {
   final _controller = TextEditingController();
   bool _sending = false;
 
-  CollectionReference get _comments => FirebaseFirestore.instance
-      .collection('posts')
-      .doc(widget.postId)
-      .collection('comments');
-
   @override
   void dispose() {
     _controller.dispose();
@@ -29,42 +26,25 @@ class _CommentsSheetState extends State<CommentsSheet> {
   Future<void> _send() async {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
-    final user = FirebaseAuth.instance.currentUser;
+    final auth = AuthService();
+    final user = auth.currentUser;
     if (user == null) return;
 
     setState(() => _sending = true);
-    final username = user.displayName ?? user.email?.split('@').first ?? 'Raver';
-    final postRef = FirebaseFirestore.instance.collection('posts').doc(widget.postId);
+    final username = auth.currentDisplayName;
 
     try {
-      final batch = FirebaseFirestore.instance.batch(); //a batch is a container that holds multiple Firestore writes until youre ready to write them all at once
-      batch.set(_comments.doc(), { //batch.set(ref,data) is same as _comments.doc().set but held back until batch.commit
-        'uid': user.uid,
-        'username': username,
-        'text': text,
-        'created_at': FieldValue.serverTimestamp(),
-      });
-      batch.update(postRef, {'comment_count': FieldValue.increment(1)}); //queue a second write that adds 1 to the post's comment count , also held back until commit
-      await batch.commit();
-      _controller.clear(); //empty the text field after comment sent
+      await PostService().addComment(widget.postId, user.uid, username, text);
+      _controller.clear();
     } catch (e) {
-      if (mounted) { //only show error comment if screen still on, if not dont attempt to show error msg
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Comment error: $e')),
         );
       }
     } finally {
       if (mounted) setState(() => _sending = false);
-    } //no matter if comment succeeded or failed, always turn off loading spinner at the end
-  }
-
-  String _timeAgo(Timestamp? ts) {
-    if (ts == null) return 'now';
-    final diff = DateTime.now().difference(ts.toDate());
-    if (diff.inMinutes < 1) return 'now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
-    if (diff.inHours < 24) return '${diff.inHours}h';
-    return '${diff.inDays}d';
+    }
   }
 
   @override
@@ -76,7 +56,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
       child: Container(
         height: sheetHeight,
         decoration: const BoxDecoration(
-          color: Color(0xFF130228),
+          color: kSheet,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: Column(
@@ -98,7 +78,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
             const Divider(height: 1, color: kBorder),
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
-                stream: _comments.orderBy('created_at').snapshots(),
+                stream: PostService().commentsStream(widget.postId),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Padding(
@@ -200,7 +180,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
                     Text(username,
                         style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
                     const SizedBox(width: 8),
-                    Text(_timeAgo(ts), style: const TextStyle(color: kDim, fontSize: 11)),
+                    Text(timeAgo(ts), style: const TextStyle(color: kDim, fontSize: 11)),
                   ],
                 ),
                 const SizedBox(height: 2),
