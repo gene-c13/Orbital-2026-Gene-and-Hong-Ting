@@ -8,6 +8,7 @@ import 'package:after_hours/services/attendance_service.dart';
 import 'package:after_hours/services/user_service.dart';
 import 'package:after_hours/screens/events/event_detail_screen.dart';
 import 'package:after_hours/widgets/navigation_helper.dart';
+import 'package:after_hours/widgets/user_avatar.dart';
 
 class EventsScreen extends StatefulWidget {
   const EventsScreen({super.key});
@@ -323,8 +324,8 @@ class _EventsScreenState extends State<EventsScreen> {
     );
   }
 
-  /// "John, Emma, and 3 others are going!" — hidden entirely if no one's
-  /// marked themselves attending yet.
+  /// "John, Emma, and 3 others are going!" with up to 3 overlapping profile
+  /// pictures — hidden entirely if no one's marked themselves attending yet.
   Widget _attendanceSnippet(String eventId) {
     if (eventId.isEmpty) return const SizedBox.shrink();
 
@@ -335,17 +336,19 @@ class _EventsScreenState extends State<EventsScreen> {
         if (uids.isEmpty) return const SizedBox.shrink();
 
         return FutureBuilder<List<AppUser>>(
-          future: UserService().getUsers(uids.take(2).toList()),
+          future: UserService().getUsers(uids.take(3).toList()),
           builder: (context, userSnap) {
-            final names = (userSnap.data ?? []).map((u) => u.name).toList();
-            if (names.isEmpty) return const SizedBox.shrink();
+            final users = userSnap.data ?? [];
+            if (users.isEmpty) return const SizedBox.shrink();
+
+            final names = users.take(2).map((u) => u.name).toList();
 
             return Padding(
               padding: const EdgeInsets.only(top: 10),
               child: Row(
                 children: [
-                  const Icon(Icons.people_outline, color: kAccent, size: 14),
-                  const SizedBox(width: 6),
+                  _avatarStack(users),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       _attendanceText(names, uids.length),
@@ -359,6 +362,42 @@ class _EventsScreenState extends State<EventsScreen> {
           },
         );
       },
+    );
+  }
+
+  /// Small overlapping circle-avatar cluster, up to 3 people, rightmost on
+  /// top, with a thin "cutout" ring matching the card background so the
+  /// overlap reads cleanly instead of avatars just butting up against
+  /// each other.
+  Widget _avatarStack(List<AppUser> users) {
+    const double size = 22;
+    const double overlap = 14;
+    final shown = users.take(3).toList();
+
+    return SizedBox(
+      width: overlap * (shown.length - 1) + size,
+      height: size,
+      child: Stack(
+        children: [
+          for (var i = 0; i < shown.length; i++)
+            Positioned(
+              left: i * overlap,
+              child: Container(
+                padding: const EdgeInsets.all(1.5),
+                decoration: const BoxDecoration(
+                  color: kSurface,
+                  shape: BoxShape.circle,
+                ),
+                child: UserAvatar(
+                  photoUrl: shown[i].photoUrl,
+                  displayName: shown[i].name,
+                  radius: size / 2 - 1.5,
+                  fontSize: 9,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
