@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:after_hours/theme/app_theme.dart';
+import 'package:after_hours/services/auth_service.dart';
 import 'package:after_hours/models/user.dart';
 import 'package:after_hours/services/attendance_service.dart';
 import 'package:after_hours/services/user_service.dart';
@@ -21,7 +21,7 @@ class AttendeeListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currentUid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final currentUid = AuthService().currentUid ?? '';
 
     return Scaffold(
       body: Container(

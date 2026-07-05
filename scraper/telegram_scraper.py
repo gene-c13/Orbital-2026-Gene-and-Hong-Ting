@@ -53,6 +53,7 @@ Fields to extract:
 - time: doors open time e.g. "10:00 PM" (string or null)
 - price: entry/ticket price only, ignore bottle or sofa package prices (string or null)"
 - has_guestlist: true if guestlist is mentioned (boolean)
+- dj: DJ name(s) performing. Might follow "ft" (string or null)
 - guestlist_url: URL to guestlist form if present (string or null)
 
 Return only valid JSON, no explanation. If not an event, return the word null."""

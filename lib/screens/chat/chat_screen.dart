@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:after_hours/theme/app_theme.dart';
+import 'package:after_hours/services/auth_service.dart';
 import 'package:after_hours/services/chat_service.dart';
 import 'package:after_hours/utils/time_format.dart';
 
@@ -25,7 +25,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final _chatService    = ChatService();
 
   String? _chatId;
-  String get _currentUid => FirebaseAuth.instance.currentUser?.uid ?? '';
+  String get _currentUid => AuthService().currentUid ?? '';
   int _lastMessageCount = 0; // track count so we only scroll when a new message arrives
 
   @override

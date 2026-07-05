@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:after_hours/services/auth_service.dart';
 import 'package:after_hours/services/friend_service.dart';
 import 'package:after_hours/services/user_service.dart';
 import 'package:after_hours/models/user.dart';
@@ -19,7 +19,7 @@ class UserSearchScreen extends StatefulWidget {
 class _UserSearchScreenState extends State<UserSearchScreen> {
   final _controller = TextEditingController();
   final _friendService = FriendService();
-  final _currentUid = FirebaseAuth.instance.currentUser?.uid ?? '';
+  final _currentUid = AuthService().currentUid ?? '';
 
   List<AppUser> _results = []; //list of AppUser
   bool _loading = false;

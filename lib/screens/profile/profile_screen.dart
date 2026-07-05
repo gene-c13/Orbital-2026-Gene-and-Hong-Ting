@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/screens/auth/login_screen.dart';
@@ -22,9 +21,10 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   void _openEditPopup(AppUser? appUser) {
-    final user = FirebaseAuth.instance.currentUser;
+    final auth = AuthService();
+    final user = auth.currentUser;
     if (user == null) return;
-    final displayName = AuthService().currentDisplayName;
+    final displayName = auth.currentDisplayName;
     final genre    = appUser?.favouriteGenre ?? '';
     final venue    = appUser?.favouriteVenue ?? '';
     final photoUrl = appUser?.photoUrl ?? '';
@@ -48,10 +48,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
+    final auth = AuthService();
+    final user = auth.currentUser;
     if (user == null) return const SizedBox.shrink();
 
-    final displayName = AuthService().currentDisplayName;
+    final displayName = auth.currentDisplayName;
 
     return StreamBuilder<AppUser?>(
       stream: UserService().userStream(user.uid),
@@ -82,7 +83,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                         GestureDetector(
                           onTap: () async {
-                            await FirebaseAuth.instance.signOut();
+                            await AuthService().signOut();
                             if (!context.mounted) return;
                             Navigator.of(context).pushReplacement(
                               MaterialPageRoute(builder: (_) => const LoginScreen()),

@@ -85,7 +85,7 @@ def get_event_links(driver):
         seen.add(href)
 
         parts = href.split("/")
-        venue_slug = parts[5] if len(parts) > 5 else "unknown" #venue_slug is the word in the url that identifies the venue eg. capital, and gets mapped to readable name via venue_map
+        venue_slug = parts[4] if len(parts) > 4 else "unknown" #venue_slug is the word in the url that identifies the venue eg. capital, and gets mapped to readable name via venue_map
         venue_map = {
             "capital": "Capital",
             "zouk": "Zouk Mainroom",
@@ -103,7 +103,7 @@ def get_event_links(driver):
 
 def scrape_event_detail(driver, event_url):
     driver.get(event_url)
-    time.sleep(8)
+    time.sleep(12)
 
     soup = BeautifulSoup(driver.page_source, "html.parser")
 

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:after_hours/theme/app_theme.dart';
+import 'package:after_hours/services/auth_service.dart';
 import 'package:after_hours/services/chat_service.dart';
 import 'package:after_hours/services/user_service.dart';
 import 'package:after_hours/models/user.dart';
@@ -13,7 +13,7 @@ class ChatListScreen extends StatelessWidget { //stateless because the streambui
 
   @override
   Widget build(BuildContext context) {
-    final currentUid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final currentUid = AuthService().currentUid ?? '';
 
     return Scaffold(
       body: Container(
