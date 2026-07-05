@@ -39,7 +39,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
   int get _strength {
     final p = _passwordController.text;
     if (p.isEmpty) return 0;
-    final score = [_hasMinLength, _hasUppercase, _hasNumber, _hasSpecial].where((c) => c).length;
+    var score = 0;
+    if (_hasMinLength) score++;
+    if (_hasUppercase) score++;
+    if (_hasNumber) score++;
+    if (_hasSpecial) score++;
     if (score <= 1) return 1;
     if (score <= 2) return 2;
     return 3;

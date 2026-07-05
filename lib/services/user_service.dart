@@ -29,27 +29,17 @@ class UserService {
     });
   }
 
-  /// Fetches multiple users by uid in as few queries as possible — for
-  /// attendee lists, friend lists, chat participant lists, etc., instead of
-  /// firing one read per uid. Firestore's `whereIn` only accepts up to 10
-  /// values per query, so this batches automatically for longer lists.
+  /// Fetches multiple users by uid — for attendee lists, friend lists,
+  /// chat participant lists, etc.
   Future<List<AppUser>> getUsers(List<String> uids) async {
     if (uids.isEmpty) return [];
 
-    final results = <AppUser>[];
-    for (var i = 0; i < uids.length; i += 10) {
-      final end = (i + 10 > uids.length) ? uids.length : i + 10;
-      final batch = uids.sublist(i, end);
-
-      final snap = await _usersCollection
-          .where(FieldPath.documentId, whereIn: batch)
-          .get();
-
-      results.addAll(snap.docs.map(
-        (d) => AppUser.fromFirestore(d.data() as Map<String, dynamic>, d.id),
-      ));
+    final users = <AppUser>[];
+    for (final uid in uids) {
+      final u = await getUser(uid);
+      if (u != null) users.add(u);
     }
-    return results;
+    return users;
   }
 
   Future<String> _uploadAvatar(String uid, Uint8List bytes) async {

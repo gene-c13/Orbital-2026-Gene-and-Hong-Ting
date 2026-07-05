@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -9,8 +8,6 @@ import 'package:after_hours/screens/social/create_post_screen.dart';
 import 'package:after_hours/widgets/navigation_helper.dart';
 import 'package:after_hours/screens/social/comments_sheet.dart';
 import 'package:after_hours/screens/social/user_search_screen.dart';
-import 'package:after_hours/services/user_service.dart';
-import 'package:after_hours/services/friend_service.dart';
 
 class SocialScreen extends StatefulWidget {
   const SocialScreen({super.key});
@@ -20,15 +17,8 @@ class SocialScreen extends StatefulWidget {
 }
 
 class _SocialScreenState extends State<SocialScreen> {
-  // the posts stream subscription — stored so we can cancel it in dispose()
-  StreamSubscription<QuerySnapshot>? _postsSub;
-
   // which docs passed the visibility check and should be shown in the feed
   List<QueryDocumentSnapshot> _visibleDocs = [];
-
-  // cache of uid → isFriend result so we never call isFriend() twice for the
-  // same person while the feed is open
-  final Map<String, bool> _friendCache = {};
 
   String? _currentUid;
   bool _initialLoad = true;
@@ -41,89 +31,71 @@ class _SocialScreenState extends State<SocialScreen> {
     _subscribeToPosts();
   }
 
-  @override
-  void dispose() {
-    _postsSub?.cancel();
-    super.dispose();
-  }
-
   void _subscribeToPosts() {
-    final stream = FirebaseFirestore.instance
+    if (_currentUid == null) {
+      setState(() { _visibleDocs = []; _initialLoad = false; });
+      return;
+    }
+
+    // two separate queries that Firestore rules can evaluate without exists() calls:
+    // 1) all public posts, 2) the current user's own posts (which may be private)
+    final publicStream = FirebaseFirestore.instance
         .collection('posts')
+        .where('is_public', isEqualTo: true)
         .orderBy('created_at', descending: true)
         .limit(50)
         .snapshots();
 
-    _postsSub = stream.listen(
-      (snapshot) => _updateVisible(snapshot.docs),
-      onError: (_) {
-        if (mounted) setState(() => _hasError = true);
+    final ownStream = FirebaseFirestore.instance
+        .collection('posts')
+        .where('uid', isEqualTo: _currentUid)
+        .orderBy('created_at', descending: true)
+        .limit(50)
+        .snapshots();
+
+    // hold the latest snapshot from each stream so we can merge them
+    QuerySnapshot? latestPublic;
+    QuerySnapshot? latestOwn;
+
+    void merge() {
+      final publicDocs = latestPublic?.docs ?? [];
+      final ownDocs    = latestOwn?.docs   ?? [];
+
+      // combine, deduplicate by doc ID (own posts also appear in public stream
+      // if the user is public), then sort newest-first
+      final seen = <String>{};
+      final merged = <QueryDocumentSnapshot>[];
+      for (final doc in [...publicDocs, ...ownDocs]) {
+        if (seen.add(doc.id)) merged.add(doc);
+      }
+      merged.sort((a, b) {
+        final at = (a.data() as Map<String, dynamic>)['created_at'] as Timestamp?;
+        final bt = (b.data() as Map<String, dynamic>)['created_at'] as Timestamp?;
+        if (at == null && bt == null) return 0;
+        if (at == null) return 1;
+        if (bt == null) return -1;
+        return bt.compareTo(at);
+      });
+
+      if (mounted) setState(() { _visibleDocs = merged; _initialLoad = false; });
+    }
+
+    // listen to both; each time either fires, re-merge and rebuild
+    publicStream.listen(
+      (snap) { latestPublic = snap; merge(); },
+      onError: (e) {
+        print('SOCIAL FEED ERROR: $e');
+        if (mounted) setState(() { _hasError = true; _initialLoad = false; });
       },
     );
-  }
 
-  /// Figures out which docs are visible to the current user, then calls
-  /// setState once with the final list. This runs in the background whenever
-  /// Firestore sends a new snapshot — not inside build().
-  Future<void> _updateVisible(List<QueryDocumentSnapshot> docs) async {
-    if (_currentUid == null) {
-      if (mounted) setState(() { _visibleDocs = []; _initialLoad = false; });
-      return;
-    }
-
-    try {
-      // collect every author uid we haven't cached yet
-      final uncachedUids = docs
-          .map((d) => (d.data() as Map<String, dynamic>)['uid'] as String?)
-          .whereType<String>()
-          .toSet()
-          .where((uid) => uid != _currentUid && !_friendCache.containsKey(uid))
-          .toList();
-
-      if (uncachedUids.isNotEmpty) {
-        // fetch profile info for uncached authors in one network call
-        final authors = await UserService().getUsers(uncachedUids);
-        final authorsByUid = {for (final a in authors) a.uid: a};
-
-        // split into public (no friendship check needed) and private
-        final privateUids = uncachedUids
-            .where((uid) => !(authorsByUid[uid]?.isPublic ?? true))
-            .toList();
-
-        // run all isFriend checks at the same time instead of one after another
-        if (privateUids.isNotEmpty) {
-          final results = await Future.wait(
-            privateUids.map((uid) => FriendService().isFriend(_currentUid!, uid)),
-          );
-          for (var i = 0; i < privateUids.length; i++) {
-            _friendCache[privateUids[i]] = results[i];
-          }
-        }
-
-        // public authors are always visible — store true so we don't re-check
-        for (final uid in uncachedUids) {
-          _friendCache.putIfAbsent(uid, () => true);
-        }
-      }
-
-      // now filter using the populated cache
-      final visible = docs.where((doc) {
-        final uid = (doc.data() as Map<String, dynamic>)['uid'] as String?;
-        if (uid == null) return false;
-        if (uid == _currentUid) return true; // own posts always visible
-        return _friendCache[uid] ?? true;
-      }).toList();
-
-      if (mounted) {
-        setState(() {
-          _visibleDocs = visible;
-          _initialLoad = false;
-        });
-      }
-    } catch (_) {
-      // if any network call throws, stop the spinner and show the error state
-      if (mounted) setState(() { _hasError = true; _initialLoad = false; });
-    }
+    ownStream.listen(
+      (snap) { latestOwn = snap; merge(); },
+      onError: (e) {
+        print('SOCIAL OWN ERROR: $e');
+        if (mounted) setState(() { _hasError = true; _initialLoad = false; });
+      },
+    );
   }
 
   @override

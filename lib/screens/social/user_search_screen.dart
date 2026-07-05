@@ -56,6 +56,8 @@ class _UserSearchScreenState extends State<UserSearchScreen> {
     _lastQuery = query;
 
     try {
+      // \uf8ff is a very high unicode character, so anything starting with
+      // query will fall between query and query+\uf8ff \u2014 Firestore's way of doing a "starts with" search
       final snapshot = await FirebaseFirestore.instance
           .collection('users')
           .where('username', isGreaterThanOrEqualTo: query)
@@ -225,12 +227,12 @@ class _UserResultTileState extends State<_UserResultTile> {
               if (alreadyFriend) {
                 return TextButton(
                   onPressed: () async {
-                    final navigator = Navigator.of(context);
                     await ChatService().getOrCreateChat(
                       widget.currentUid,
                       widget.uid,
                     );
-                    navigator.push(
+                    if (!context.mounted) return;
+                    Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => ChatScreen(
                           otherUid: widget.uid,

@@ -153,7 +153,7 @@ Future<void> _launchBookingUrl(BuildContext context) async {
           // show event image at the top if imageUrl is not empty
           if (event.imageUrl.isNotEmpty)
             Image.network(
-              'https://images.weserv.nl/?url=${Uri.encodeComponent(event.imageUrl)}',
+              event.imageUrl,
               width: double.infinity,
               height: 200,
               fit: BoxFit.cover,
@@ -318,9 +318,9 @@ Future<void> _launchBookingUrl(BuildContext context) async {
                                         if (!friendSnap.hasData || !friendSnap.data!) return const SizedBox.shrink();
                                         return TextButton(
                                           onPressed: () async {
-                                            final navigator = Navigator.of(context);
                                             await ChatService().getOrCreateChat(currentUid!, user.uid);
-                                            navigator.push(
+                                            if (!context.mounted) return;
+                                            Navigator.of(context).push(
                                               MaterialPageRoute(
                                                 builder: (_) => ChatScreen(
                                                   otherUid: user.uid,

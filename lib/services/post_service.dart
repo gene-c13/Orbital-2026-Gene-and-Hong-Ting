@@ -19,6 +19,7 @@ class PostService {
     required String? startTime,
     required String? endTime,
     required double hoursOut,
+    required bool isPublic,
   }) async {
     final batch = _db.batch();
 
@@ -41,6 +42,7 @@ class PostService {
       'start_time':    startTime,
       'end_time':      endTime,
       'hours_out':     hoursOut > 0 ? hoursOut : null,
+      'is_public':     isPublic,
       'created_at':    FieldValue.serverTimestamp(),
     });
 

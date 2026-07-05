@@ -14,12 +14,14 @@ void goToTab(BuildContext context, int targetIndex) {
     return;
   }
 
-  final Widget screen = switch (targetIndex) {
-    0 => const EventsScreen(),
-    1 => const SocialScreen(),
-    3 => const ProfileScreen(),
-    _ => const EventsScreen(),
-  };
+  Widget screen;
+  if (targetIndex == 1) {
+    screen = const SocialScreen();
+  } else if (targetIndex == 3) {
+    screen = const ProfileScreen();
+  } else {
+    screen = const EventsScreen();
+  }
 
   // Clear the whole stack and push the new tab — no stacking.
   // Each tab is wrapped in _AuthGuard so remote session revocation

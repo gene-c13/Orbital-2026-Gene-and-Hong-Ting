@@ -217,6 +217,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       final displayName = user.displayName ?? user.email?.split('@').first ?? 'Raver';
       final appUser     = await UserService().getUser(user.uid);
       final username    = appUser?.username ?? '';
+      final isPublic    = appUser?.isPublic ?? true;
       final venue       = _venueController.text.trim();
       final hours    = _hoursOut();
       final imageUrl = _imageFile != null ? await _uploadImage(user.uid) : '';
@@ -235,6 +236,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         startTime:   _startTime != null ? _formatTime(_startTime!) : null,
         endTime:     _endTime   != null ? _formatTime(_endTime!)   : null,
         hoursOut:    hours,
+        isPublic:    isPublic,
       );
 
       if (!mounted) return;

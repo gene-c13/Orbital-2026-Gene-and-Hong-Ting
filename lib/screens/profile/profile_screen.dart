@@ -178,7 +178,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           builder: (context, usersSnap) {
             if (!usersSnap.hasData) return const SizedBox.shrink();
 
-            final usersByUid = {for (final u in usersSnap.data!) u.uid: u};
+            final usersByUid = <String, AppUser>{};
+            for (final u in usersSnap.data!) {
+              usersByUid[u.uid] = u;
+            }
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -283,32 +286,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _statsRow(List<_StatItem> items) {
-    return Row(
-      children: items.mapIndexed((i, item) {
-        return Expanded(
-          child: Container(
-            margin: EdgeInsets.only(right: i < items.length - 1 ? 10 : 0),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-            decoration: BoxDecoration(
-              color: kSurface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: kBorder),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(item.icon, color: kAccent, size: 16),
-                const SizedBox(height: 8),
-                Text(item.value,
-                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 2),
-                Text(item.label, style: const TextStyle(color: kDim, fontSize: 10, letterSpacing: 0.2)),
-              ],
-            ),
+    final row = <Widget>[];
+    for (var i = 0; i < items.length; i++) {
+      final item = items[i];
+      row.add(Expanded(
+        child: Container(
+          margin: EdgeInsets.only(right: i < items.length - 1 ? 10 : 0),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          decoration: BoxDecoration(
+            color: kSurface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: kBorder),
           ),
-        );
-      }).toList(),
-    );
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(item.icon, color: kAccent, size: 16),
+              const SizedBox(height: 8),
+              Text(item.value,
+                  style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 2),
+              Text(item.label, style: const TextStyle(color: kDim, fontSize: 10, letterSpacing: 0.2)),
+            ],
+          ),
+        ),
+      ));
+    }
+    return Row(children: row);
   }
 
   Widget _friendsCard(String currentUid) {
@@ -366,9 +370,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                         TextButton(
                           onPressed: () async {
-                            final navigator = Navigator.of(context);
                             await ChatService().getOrCreateChat(currentUid, friend.uid);
-                            navigator.push(
+                            if (!context.mounted) return;
+                            Navigator.of(context).push(
                               MaterialPageRoute(
                                 builder: (_) => ChatScreen(
                                   otherUid: friend.uid,
@@ -438,11 +442,4 @@ class _StatItem {
   const _StatItem({required this.label, required this.value, required this.icon});
 }
 
-extension<T> on List<T> {
-  Iterable<R> mapIndexed<R>(R Function(int index, T item) f) sync* {
-    for (var i = 0; i < length; i++) {
-      yield f(i, this[i]);
-    }
-  }
-}
 

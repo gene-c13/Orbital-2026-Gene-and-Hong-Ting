@@ -150,9 +150,9 @@ class _AttendeeTile extends StatelessWidget {
               if (!snap.hasData || !snap.data!) return const SizedBox.shrink();
               return TextButton(
                 onPressed: () async {
-                  final navigator = Navigator.of(context);
                   await ChatService().getOrCreateChat(currentUid, user.uid);
-                  navigator.push(
+                  if (!context.mounted) return;
+                  Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => ChatScreen(
                         otherUid: user.uid,

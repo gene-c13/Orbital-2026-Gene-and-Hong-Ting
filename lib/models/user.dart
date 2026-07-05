@@ -46,10 +46,10 @@ class AppUser {
       favouriteVenue: data['favourite_venue'] ?? '',
       favouriteGenre: data['favourite_genre'] ?? '',
       clubsVisited: List<String>.from(data['clubs_visited'] ?? []),
-      hoursThisMonth: (data['hours_this_month'] ?? 0) as num,
-      eventsThisMonth: ((data['events_this_month'] ?? 0) as num).toInt(),
-      totalEvents: ((data['total_events'] ?? 0) as num).toInt(),
-      pukeCount: ((data['puke_count'] ?? 0) as num).toInt(),
+      hoursThisMonth: data['hours_this_month'] ?? 0,
+      eventsThisMonth: data['events_this_month'] ?? 0,
+      totalEvents: data['total_events'] ?? 0,
+      pukeCount: data['puke_count'] ?? 0,
       isPublic: data['is_public'] as bool? ?? true,
     );
   }
