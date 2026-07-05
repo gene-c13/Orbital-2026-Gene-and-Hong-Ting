@@ -25,6 +25,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   String? _chatId;
   String get _currentUid => FirebaseAuth.instance.currentUser?.uid ?? '';
+  int _lastMessageCount = 0; // track count so we only scroll when a new message arrives
 
   @override
   void initState() {
@@ -40,6 +41,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _initChat() async {
+    if (_currentUid.isEmpty) return; // no session, bail out safely
     final id = await _chatService.getOrCreateChat(_currentUid, widget.otherUid);
     if (mounted) setState(() => _chatId = id);
   }
@@ -47,9 +49,14 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _send() async {
     if (_chatId == null || _controller.text.trim().isEmpty) return;
     final text = _controller.text;
-    _controller.clear();
-    await _chatService.sendMessage(_chatId!, _currentUid, text);
-    _scrollToBottom();
+    try {
+      _controller.clear();
+      await _chatService.sendMessage(_chatId!, _currentUid, text);
+      _scrollToBottom();
+    } catch (_) {
+      // restore text so the user can retry if the write failed
+      _controller.text = text;
+    }
   }
 
   void _scrollToBottom() {
@@ -96,8 +103,8 @@ class _ChatScreenState extends State<ChatScreen> {
                       radius: 18,
                       backgroundColor: kAccent.withValues(alpha: 0.3),
                       child: Text(
-                        widget.otherDisplayName[0].toUpperCase(),
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                        (widget.otherDisplayName.isEmpty ? '?' : widget.otherDisplayName[0]).toUpperCase(),  //ternary operator to prevent crash if name is empty
+                         style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -123,7 +130,12 @@ class _ChatScreenState extends State<ChatScreen> {
 
                           final messages = snapshot.data?.docs ?? [];
 
-                          WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+                          // only scroll when a genuinely new message arrives,
+                          // not on every rebuild (keyboard open, theme change, etc.)
+                          if (messages.length != _lastMessageCount) {
+                            _lastMessageCount = messages.length;
+                            WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+                          }
 
                           if (messages.isEmpty) {
                             return const Center(

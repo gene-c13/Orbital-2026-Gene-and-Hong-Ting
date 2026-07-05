@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -11,46 +12,118 @@ import 'package:after_hours/screens/social/user_search_screen.dart';
 import 'package:after_hours/services/user_service.dart';
 import 'package:after_hours/services/friend_service.dart';
 
-class SocialScreen extends StatelessWidget {
+class SocialScreen extends StatefulWidget {
   const SocialScreen({super.key});
 
-  /// Filters posts down to ones the current viewer is allowed to see: their
-  /// own, anyone with a public profile, or a friend with a private one.
-  /// Fetches each distinct author once (via UserService.getUsers) rather
-  /// than re-checking per post, since the same author often has several
-  /// posts in the feed.
-  Future<List<QueryDocumentSnapshot>> _visiblePosts(
-    List<QueryDocumentSnapshot> docs,
-  ) async {
-    final currentUid = FirebaseAuth.instance.currentUser?.uid;
-    if (currentUid == null) return [];
+  @override
+  State<SocialScreen> createState() => _SocialScreenState();
+}
 
-    final authorUids = docs
-        .map((doc) => (doc.data() as Map<String, dynamic>)['uid'] as String?)
-        .whereType<String>()
-        .toSet()
-        .toList();
+class _SocialScreenState extends State<SocialScreen> {
+  // the posts stream subscription — stored so we can cancel it in dispose()
+  StreamSubscription<QuerySnapshot>? _postsSub;
 
-    final authors = await UserService().getUsers(authorUids);
-    final authorsByUid = {for (final a in authors) a.uid: a};
-    final friendService = FriendService();
+  // which docs passed the visibility check and should be shown in the feed
+  List<QueryDocumentSnapshot> _visibleDocs = [];
 
-    final visible = <QueryDocumentSnapshot>[];
-    for (final doc in docs) {
-      final authorUid = (doc.data() as Map<String, dynamic>)['uid'] as String?;
-      if (authorUid == null) continue;
+  // cache of uid → isFriend result so we never call isFriend() twice for the
+  // same person while the feed is open
+  final Map<String, bool> _friendCache = {};
 
-      final isOwnPost = authorUid == currentUid;
-      final isPublic = authorsByUid[authorUid]?.isPublic ?? true;
+  String? _currentUid;
+  bool _initialLoad = true;
+  bool _hasError = false;
 
-      if (isOwnPost || isPublic) {
-        visible.add(doc);
-      } else if (await friendService.isFriend(currentUid, authorUid)) {
-        visible.add(doc);
-      }
+  @override
+  void initState() {
+    super.initState();
+    _currentUid = FirebaseAuth.instance.currentUser?.uid;
+    _subscribeToPosts();
+  }
+
+  @override
+  void dispose() {
+    _postsSub?.cancel();
+    super.dispose();
+  }
+
+  void _subscribeToPosts() {
+    final stream = FirebaseFirestore.instance
+        .collection('posts')
+        .orderBy('created_at', descending: true)
+        .limit(50)
+        .snapshots();
+
+    _postsSub = stream.listen(
+      (snapshot) => _updateVisible(snapshot.docs),
+      onError: (_) {
+        if (mounted) setState(() => _hasError = true);
+      },
+    );
+  }
+
+  /// Figures out which docs are visible to the current user, then calls
+  /// setState once with the final list. This runs in the background whenever
+  /// Firestore sends a new snapshot — not inside build().
+  Future<void> _updateVisible(List<QueryDocumentSnapshot> docs) async {
+    if (_currentUid == null) {
+      if (mounted) setState(() { _visibleDocs = []; _initialLoad = false; });
+      return;
     }
 
-    return visible;
+    try {
+      // collect every author uid we haven't cached yet
+      final uncachedUids = docs
+          .map((d) => (d.data() as Map<String, dynamic>)['uid'] as String?)
+          .whereType<String>()
+          .toSet()
+          .where((uid) => uid != _currentUid && !_friendCache.containsKey(uid))
+          .toList();
+
+      if (uncachedUids.isNotEmpty) {
+        // fetch profile info for uncached authors in one network call
+        final authors = await UserService().getUsers(uncachedUids);
+        final authorsByUid = {for (final a in authors) a.uid: a};
+
+        // split into public (no friendship check needed) and private
+        final privateUids = uncachedUids
+            .where((uid) => !(authorsByUid[uid]?.isPublic ?? true))
+            .toList();
+
+        // run all isFriend checks at the same time instead of one after another
+        if (privateUids.isNotEmpty) {
+          final results = await Future.wait(
+            privateUids.map((uid) => FriendService().isFriend(_currentUid!, uid)),
+          );
+          for (var i = 0; i < privateUids.length; i++) {
+            _friendCache[privateUids[i]] = results[i];
+          }
+        }
+
+        // public authors are always visible — store true so we don't re-check
+        for (final uid in uncachedUids) {
+          _friendCache.putIfAbsent(uid, () => true);
+        }
+      }
+
+      // now filter using the populated cache
+      final visible = docs.where((doc) {
+        final uid = (doc.data() as Map<String, dynamic>)['uid'] as String?;
+        if (uid == null) return false;
+        if (uid == _currentUid) return true; // own posts always visible
+        return _friendCache[uid] ?? true;
+      }).toList();
+
+      if (mounted) {
+        setState(() {
+          _visibleDocs = visible;
+          _initialLoad = false;
+        });
+      }
+    } catch (_) {
+      // if any network call throws, stop the spinner and show the error state
+      if (mounted) setState(() { _hasError = true; _initialLoad = false; });
+    }
   }
 
   @override
@@ -112,72 +185,53 @@ class SocialScreen extends StatelessWidget {
                 ),
               ),
               const Divider(height: 1, thickness: 1, color: kBorder),
-              Expanded(
-                child: StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance
-                      .collection('posts')
-                      .orderBy('created_at', descending: true)
-                      .snapshots(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator(color: kAccent, strokeWidth: 2));
-                    }
-                    if (snapshot.hasError) {
-                      return const Center(
-                        child: Text('Something went wrong.', style: TextStyle(color: kMuted)),
-                      );
-                    }
-                    final docs = snapshot.data?.docs ?? [];
-
-                    return FutureBuilder<List<QueryDocumentSnapshot>>(
-                      future: _visiblePosts(docs),
-                      builder: (context, visibleSnap) {
-                        if (!visibleSnap.hasData) {
-                          return const Center(child: CircularProgressIndicator(color: kAccent, strokeWidth: 2));
-                        }
-
-                        final visibleDocs = visibleSnap.data!;
-
-                        if (visibleDocs.isEmpty) {
-                          return Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.photo_camera_outlined, color: kDim, size: 56),
-                                const SizedBox(height: 18),
-                                const Text(
-                                  'No posts yet.',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 21,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 0.2,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                const Text('Be the first to log a night.', style: TextStyle(color: kDim, fontSize: 13)),
-                              ],
-                            ),
-                          );
-                        }
-
-                        return ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
-                          itemCount: visibleDocs.length,
-                          itemBuilder: (context, index) {
-                            final data = visibleDocs[index].data() as Map<String, dynamic>;
-                            return _PostCard(postId: visibleDocs[index].id, data: data);
-                          },
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
+              Expanded(child: _buildBody()),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_initialLoad) {
+      return const Center(child: CircularProgressIndicator(color: kAccent, strokeWidth: 2));
+    }
+    if (_hasError) {
+      return const Center(
+        child: Text('Something went wrong.', style: TextStyle(color: kMuted)),
+      );
+    }
+    if (_visibleDocs.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.photo_camera_outlined, color: kDim, size: 56),
+            const SizedBox(height: 18),
+            const Text(
+              'No posts yet.',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 21,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.2,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text('Be the first to log a night.', style: TextStyle(color: kDim, fontSize: 13)),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+      itemCount: _visibleDocs.length,
+      itemBuilder: (context, index) {
+        final data = _visibleDocs[index].data() as Map<String, dynamic>;
+        return _PostCard(postId: _visibleDocs[index].id, data: data);
+      },
     );
   }
 }
@@ -214,6 +268,7 @@ class _PostCardState extends State<_PostCard> {
   String _timeAgo(Timestamp? ts) {
     if (ts == null) return '';
     final diff = DateTime.now().difference(ts.toDate());
+    if (diff.inMinutes < 1) return 'now';
     if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
     if (diff.inHours < 24)   return '${diff.inHours}h ago';
     return '${diff.inDays}d ago';
@@ -254,7 +309,7 @@ class _PostCardState extends State<_PostCard> {
                   radius: 20,
                   backgroundColor: kAccent.withValues(alpha: 0.3),
                   child: Text(
-                    displayName[0].toUpperCase(),
+                    (displayName.isEmpty ? '?' : displayName[0]).toUpperCase(),
                     style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16),
                   ),
                 ),

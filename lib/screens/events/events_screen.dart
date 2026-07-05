@@ -26,6 +26,16 @@ class _EventsScreenState extends State<EventsScreen> {
   String _query = '';
   final _searchController = TextEditingController();
 
+  // stream stored as a field so it's only created when the date actually changes,
+  // not on every rebuild (every keystroke, every setState)
+  late Stream<List<Event>> _dayStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _dayStream = _eventService.getEventsByDateStream(_dateKey);
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -57,11 +67,17 @@ class _EventsScreenState extends State<EventsScreen> {
         child: child!,
       ),
     );
-    if (picked != null) setState(() => selectedDate = picked);
+    if (picked != null) setState(() {
+      selectedDate = picked;
+      _dayStream = _eventService.getEventsByDateStream(_dateKey); // recreate stream for picked date
+    });
   }
 
   void _changeDay(int days) {
-    setState(() => selectedDate = selectedDate.add(Duration(days: days)));
+    setState(() {
+      selectedDate = selectedDate.add(Duration(days: days));
+      _dayStream = _eventService.getEventsByDateStream(_dateKey); // recreate stream for new date
+    });
   }
 
   @override
@@ -82,7 +98,7 @@ class _EventsScreenState extends State<EventsScreen> {
                 child: _searching
                     ? _buildSearchResults()
                     : StreamBuilder<List<Event>>(
-                        stream: _eventService.getEventsByDateStream(_dateKey),
+                        stream: _dayStream,
                         builder: (context, snapshot) => _buildEventList(snapshot),
                       ),
               ),
@@ -163,7 +179,7 @@ class _EventsScreenState extends State<EventsScreen> {
             ),
             const SizedBox(height: 12),
             StreamBuilder<List<Event>>(
-              stream: _eventService.getEventsByDateStream(_dateKey),
+              stream: _dayStream,
               builder: (context, snapshot) {
                 final count = snapshot.data?.length ?? 0;
                 if (count == 0) return const SizedBox.shrink();

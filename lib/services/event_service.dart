@@ -20,7 +20,7 @@ class EventService {
   }
 
   Stream<List<Event>> getAllEventsStream() {
-  final today = DateTime.now();
+  final today = DateTime.now().toUtc().add(const Duration(hours: 8)); // SGT = UTC+8
   final todayKey = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
 
   return _eventsCollection

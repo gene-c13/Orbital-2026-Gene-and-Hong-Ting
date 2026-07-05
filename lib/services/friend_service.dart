@@ -21,15 +21,10 @@ class FriendService {
   }
 
   Future<void> sendFriendRequest(String fromUid, String toUid) async {
-    final existing = await _db
-        .collection('friend_requests')
-        .where('from_uid', isEqualTo: fromUid)
-        .where('to_uid', isEqualTo: toUid)
-        .get();
-
-    if (existing.docs.isNotEmpty) return;
-
-    await _db.collection('friend_requests').add({
+    // deterministic doc ID means two rapid taps both write the same document
+    // so there's no way to create a duplicate request
+    final docId = '${fromUid}_$toUid';
+    await _db.collection('friend_requests').doc(docId).set({
       'from_uid': fromUid,
       'to_uid': toUid,
       'status': 'pending',
@@ -82,12 +77,18 @@ class FriendService {
   }
 
   Future<bool> hasPendingRequest(String fromUid, String toUid) async {
-    final result = await _db
+    // check both A→B and B→A so the search screen shows "Sent" or hides "Add"
+    // in both directions, since sendFriendRequest uses a deterministic doc ID
+    final forward = await _db
         .collection('friend_requests')
-        .where('from_uid', isEqualTo: fromUid)
-        .where('to_uid', isEqualTo: toUid)
-        .where('status', isEqualTo: 'pending')
+        .doc('${fromUid}_$toUid')
         .get();
-    return result.docs.isNotEmpty;
+    if (forward.exists && forward.data()?['status'] == 'pending') return true;
+
+    final reverse = await _db
+        .collection('friend_requests')
+        .doc('${toUid}_$fromUid')
+        .get();
+    return reverse.exists && reverse.data()?['status'] == 'pending';
   }
 }

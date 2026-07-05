@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; //where profile data lives (we need to write to store)
 import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/screens/auth/email_verification_screen.dart';
 
@@ -17,7 +17,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _confirmController  = TextEditingController();
   final _usernameController = TextEditingController();
 
-  bool _showPassword = false;
+  bool _showPassword = false; 
   bool _showConfirm  = false;
   bool _submitting   = false;
 
@@ -30,12 +30,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  bool get _hasMinLength  => _passwordController.text.length >= 8;
+  bool get _hasMinLength  => _passwordController.text.length >= 8; //get declares a getter not a regular variable, no need for (), 
   bool get _hasUppercase  => _passwordController.text.contains(RegExp(r'[A-Z]'));
   bool get _hasNumber     => _passwordController.text.contains(RegExp(r'[0-9]'));
   bool get _hasSpecial    => _passwordController.text.contains(RegExp(r'[!@#\$%^&*(),.?":{}|<>_\-]'));
   bool get _validUsername => RegExp(r'^[a-zA-Z0-9_]{3,20}$').hasMatch(_usernameController.text.trim());
-
+// => is a one-line function body, a => x means when a is called, return x
   int get _strength {
     final p = _passwordController.text;
     if (p.isEmpty) return 0;
@@ -70,7 +70,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final username = _usernameController.text.trim().toLowerCase();
 
     if (email.isEmpty || password.isEmpty || username.isEmpty) { _snack('Please fill in all fields.'); return; }
-    if (username.isEmpty || email.isEmpty || password.isEmpty) { _snack('Please fill in all fields.'); return; }
     if (!_validUsername) { _snack('Username must be 3–20 chars, letters/numbers/underscores only.'); return; }
     if (!_hasMinLength) { _snack('Password must be at least 8 characters.'); return; }
     if (!_hasUppercase) { _snack('Password needs at least one uppercase letter.'); return; }
@@ -81,41 +80,53 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _submitting = true);
 
     try {
-      final usernameDoc = await FirebaseFirestore.instance
-            .collection('usernames')
-            .doc(username)
-            .get();
-      
-      if (usernameDoc.exists){
-        _snack('That username is already taken.');
-        setState(() => _submitting = false);
-        return;
-      }
+      final db = FirebaseFirestore.instance;
+      final usernameRef = db.collection('usernames').doc(username);
 
+      // Step 1: create the Auth account first.
+      // We can't create an Auth account inside a Firestore transaction, so the
+      // account goes first and we clean it up if anything after it fails.
       final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
-      final user = credential.user;
+      final user = credential.user!;
 
-      if (user != null) {
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-          'username': username,
-          'hours_this_month':  0,
-          'events_this_month': 0,
-          'puke_count':        0,
-          'total_events':      0,
-          'favourite_venue':   '',
-          'favourite_genre':   '',
-          'clubs_visited':     [],
+      // Step 2: claim the username atomically.
+      // The check and the write are inside the same transaction so two people
+      // typing the same name at the same moment both read before either writes —
+      // one of them will see the doc already exists and be rejected.
+      try {
+        await db.runTransaction((tx) async { //tx is a transaction object - you use it instead of db for reads and writes inside the block
+          final snap = await tx.get(usernameRef);
+          if (snap.exists) throw Exception('username_taken'); // abort the transaction
+          tx.set(db.collection('users').doc(user.uid), {
+            'username': username,
+            'hours_this_month':  0,
+            'events_this_month': 0,
+            'puke_count':        0,
+            'total_events':      0,
+            'favourite_venue':   '',
+            'favourite_genre':   '',
+            'clubs_visited':     [],
+          });
+          tx.set(usernameRef, {'uid': user.uid});
         });
-        
-        await FirebaseFirestore.instance.collection('usernames').doc(username).set({
-          'uid' : user.uid,
-        });
-
-        await user.sendEmailVerification();
+      } catch (e) {
+        // The Firestore step failed, so roll back by deleting the Auth account
+        // we just created — otherwise it orphans and the user can never re-register
+        // with that email.
+        await user.delete();
+        if (!mounted) return;
+        if (e.toString().contains('username_taken')) {
+          _snack('That username is already taken.');
+        } else {
+          _snack('Registration failed — please try again.');
+        }
+        return;
       }
+
+      await user.sendEmailVerification();
 
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
@@ -127,6 +138,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (e.code == 'email-already-in-use') { message = 'That email already has an account.'; }
       else if (e.code == 'invalid-email')   { message = "That email doesn't look right."; }
       _snack(message);
+    } catch (e) {
+      // catches anything else, e.g. a network error before createUserWithEmailAndPassword
+      if (!mounted) return;
+      _snack('Something went wrong. Please try again.');
     } finally {
       if (mounted) setState(() => _submitting = false);
     }

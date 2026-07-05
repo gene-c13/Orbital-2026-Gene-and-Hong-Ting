@@ -7,6 +7,7 @@ import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/widgets/user_avatar.dart';
 import 'package:after_hours/services/chat_service.dart';
 import 'package:after_hours/screens/chat/chat_screen.dart';
+import 'dart:async';
 
 class UserSearchScreen extends StatefulWidget {
   const UserSearchScreen({super.key});
@@ -20,50 +21,63 @@ class _UserSearchScreenState extends State<UserSearchScreen> {
   final _friendService = FriendService();
   final _currentUid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
-  List<AppUser> _results = [];
+  List<AppUser> _results = []; //list of AppUser
   bool _loading = false;
+  String _lastQuery = ''; //rmb the last search
+  Timer? _debounce; //countdown timer, Timer is an object that counts down and runs a function. ?means can be null, like at start where Timer isnt running yet
 
   @override
-  void initState() {
+  void initState() { //runs exactly once when screen is created
     super.initState();
-    _controller.addListener(_onChanged);
-  }
+    _controller.addListener(_onChanged); //everytime controller notices a change, call the function inside addListener
+  } //attack Listener when screen is created
 
   @override
-  void dispose() {
+  void dispose() { //when user navigates away, clean up removed widgets
+    _debounce?.cancel(); //only call cancel if not null, if removed, will crash when user leaves before typing anything ie. _debounce is null
     _controller.removeListener(_onChanged);
     _controller.dispose();
     super.dispose();
   }
 
-  void _onChanged() {
+  void _onChanged() { //logic to cancel previous timer and start a fresh 300ms , fire search when timer expire
     final query = _controller.text.trim().toLowerCase();
     if (query.isEmpty) {
-      setState(() => _results = []);
+      _debounce?.cancel();
+      setState(() { _results = []; _loading = false; }); //clear the list to empty
       return;
     }
-    _search(query);
-  }
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () => _search(query)); //2 arguments, Timer(duration,fxn to run)
+  } //cancel Timer and start a fresh one // this fxn runs because of initstate(refer to it)
 
   Future<void> _search(String query) async {
     setState(() => _loading = true);
+    _lastQuery = query;
 
-    final snapshot = await FirebaseFirestore.instance
-        .collection('users')
-        .where('username', isGreaterThanOrEqualTo: query)
-        .where('username', isLessThanOrEqualTo: '$query\uf8ff')
-        .limit(8)
-        .get();
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('username', isGreaterThanOrEqualTo: query)
+          .where('username', isLessThanOrEqualTo: '$query\uf8ff')
+          .limit(8)
+          .get();
 
-    final results = snapshot.docs
-        .map((doc) => AppUser.fromFirestore(doc.data(), doc.id))
-        .where((user) => user.uid != _currentUid)
-        .toList();
+      if (query != _lastQuery) return; // a newer search is already running
 
-    setState(() {
-      _results = results;
-      _loading = false;
-    });
+      final results = snapshot.docs
+          .map((doc) => AppUser.fromFirestore(doc.data(), doc.id))
+          .where((user) => user.uid != _currentUid)
+          .toList();
+
+      if (!mounted) return;
+      setState(() => _results = results);
+    } catch (_) {
+      // search failed silently, results stay empty
+    } finally {
+      // always clear the spinner, even if an error or early return happened
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   @override

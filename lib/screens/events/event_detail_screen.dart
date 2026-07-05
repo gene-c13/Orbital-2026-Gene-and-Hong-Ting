@@ -20,18 +20,25 @@ class EventDetailScreen extends StatelessWidget {
 
 Future<void> _launchBookingUrl(BuildContext context) async {
   if (event.bookingUrl.isEmpty) return;
-  final uri = Uri.parse(event.bookingUrl);
-
-  final bool launched = await launchUrl(
-    uri,
-    mode: LaunchMode.platformDefault,
-    webOnlyWindowName: '_blank',
-  );
-
-  if (!launched && context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Could not open ticket link.')),
+  try {
+    final uri = Uri.tryParse(event.bookingUrl);
+    if (uri == null) throw const FormatException('Bad URL');
+    final bool launched = await launchUrl(
+      uri,
+      mode: LaunchMode.platformDefault,
+      webOnlyWindowName: '_blank',
     );
+    if (!launched && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open ticket link.')),
+      );
+    }
+  } catch (_) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open ticket link.')),
+      );
+    }
   }
 }
 
@@ -250,6 +257,7 @@ Future<void> _launchBookingUrl(BuildContext context) async {
   }
 
   Widget _attendanceSection(BuildContext context) {
+    if (event.id.isEmpty) return const SizedBox.shrink();
     final currentUid = FirebaseAuth.instance.currentUser?.uid;
 
     return StreamBuilder<List<String>>(

@@ -17,8 +17,11 @@ class _LoginScreenState extends State<LoginScreen> {
   final emailController    = TextEditingController();
   final passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _submitting = false;
 
   Future<void> _signIn() async { //backend:this function wires signin button to firebase
+    if (_submitting) return;
+    setState(() => _submitting = true);
     try {
       final credential = await FirebaseAuth.instance.signInWithEmailAndPassword( //send email and pass to firebase & wait for response
         email: emailController.text.trim(),
@@ -53,6 +56,13 @@ class _LoginScreenState extends State<LoginScreen> {
         message = 'Too many attempts. Try again later.';
       }
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message))); //scaffoldmessenger manages snackbars
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Something went wrong. Please try again.')),
+      );
+    } finally {
+      if (mounted) setState(() => _submitting = false);
     }
   }
 
@@ -168,7 +178,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               shadowColor: Colors.transparent,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                             ),
-                            onPressed: _signIn,
+                            onPressed: _submitting ? null : _signIn,
                             child: const Text(
                               'Sign In',
                               style: TextStyle(

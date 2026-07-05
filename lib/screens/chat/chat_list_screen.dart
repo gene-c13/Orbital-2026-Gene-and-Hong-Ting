@@ -7,8 +7,8 @@ import 'package:after_hours/services/user_service.dart';
 import 'package:after_hours/models/user.dart';
 import 'package:after_hours/screens/chat/chat_screen.dart';
 
-class ChatListScreen extends StatelessWidget {
-  const ChatListScreen({super.key});
+class ChatListScreen extends StatelessWidget { //stateless because the streambuilder handles its own live updates internally
+  const ChatListScreen({super.key}); //identify the widget so it can track it across rebuilds
 
   @override
   Widget build(BuildContext context) {
@@ -37,10 +37,10 @@ class ChatListScreen extends StatelessWidget {
               ),
               const Divider(height: 1, thickness: 1, color: kBorder),
               Expanded(
-                child: StreamBuilder<QuerySnapshot>(
+                child: StreamBuilder<QuerySnapshot>( //StreamBuilder is a widget that rebuilds its UI every time new data arrives on a stream
                   stream: ChatService().userChatsStream(currentUid),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
+                  builder: (context, snapshot) { 
+                    if (snapshot.connectionState == ConnectionState.waiting) { //show spinner while Firestore fetches first batch of data
                       return const Center(
                         child: CircularProgressIndicator(color: kAccent, strokeWidth: 2),
                       );
@@ -69,18 +69,18 @@ class ChatListScreen extends StatelessWidget {
                       );
                     }
 
-                    return ListView.builder(
+                    return ListView.builder( //builder is constructor that builds items on demand ie.simply build whats visible on screen
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       itemCount: docs.length,
                       itemBuilder: (context, index) {
                         final data = docs[index].data() as Map<String, dynamic>;
                         final participants = List<String>.from(data['participants'] ?? []);
-                        final otherUid = participants.firstWhere(
+                        final otherUid = participants.firstWhere( //pick the uid that isnt you
                           (uid) => uid != currentUid,
                           orElse: () => '',
                         );
 
-                        return FutureBuilder<AppUser?>(
+                        return FutureBuilder<AppUser?>( //fetches other AppUser object and all their data
                           future: UserService().getUser(otherUid),
                           builder: (context, userSnap) {
                             if (!userSnap.hasData) return const SizedBox.shrink();
@@ -90,25 +90,25 @@ class ChatListScreen extends StatelessWidget {
 
                             return ListTile(
                               contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-                              leading: CircleAvatar(
+                              leading: CircleAvatar( //leading means widget on the left
                                 radius: 24,
                                 backgroundColor: kAccent.withValues(alpha: 0.3),
                                 child: Text(
-                                  other.name[0].toUpperCase(),
+                                  (other.name.isEmpty ? '?' : other.name[0]).toUpperCase(), //grabs the first character of name and capitalise for avatar initial
                                   style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
                                 ),
                               ),
-                              title: Text(
+                              title: Text( //main bold text
                                 other.name,
                                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
                               ),
-                              subtitle: Text(
+                              subtitle: Text( //smaller dimmer text
                                 lastMessage.isEmpty ? '@${other.username}' : lastMessage,
                                 style: const TextStyle(color: kDim, fontSize: 13),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                              onTap: () => Navigator.of(context).push(
+                              onTap: () => Navigator.of(context).push( //what happens when tapped
                                 MaterialPageRoute(
                                   builder: (_) => ChatScreen(
                                     otherUid:         otherUid,

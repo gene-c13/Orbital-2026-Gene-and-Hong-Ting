@@ -37,23 +37,25 @@ class _CommentsSheetState extends State<CommentsSheet> {
     final postRef = FirebaseFirestore.instance.collection('posts').doc(widget.postId);
 
     try {
-      await _comments.add({
+      final batch = FirebaseFirestore.instance.batch(); //a batch is a container that holds multiple Firestore writes until youre ready to write them all at once
+      batch.set(_comments.doc(), { //batch.set(ref,data) is same as _comments.doc().set but held back until batch.commit
         'uid': user.uid,
         'username': username,
         'text': text,
         'created_at': FieldValue.serverTimestamp(),
       });
-      await postRef.update({'comment_count': FieldValue.increment(1)});
-      _controller.clear();
+      batch.update(postRef, {'comment_count': FieldValue.increment(1)}); //queue a second write that adds 1 to the post's comment count , also held back until commit
+      await batch.commit();
+      _controller.clear(); //empty the text field after comment sent
     } catch (e) {
-      if (mounted) {
+      if (mounted) { //only show error comment if screen still on, if not dont attempt to show error msg
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Comment error: $e')),
         );
       }
     } finally {
       if (mounted) setState(() => _sending = false);
-    }
+    } //no matter if comment succeeded or failed, always turn off loading spinner at the end
   }
 
   String _timeAgo(Timestamp? ts) {
@@ -68,7 +70,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
-    final sheetHeight = media.size.height * 0.7 - media.viewInsets.bottom;
+    final sheetHeight = (media.size.height * 0.7 - media.viewInsets.bottom).clamp(200.0, media.size.height);
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Container(

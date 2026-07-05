@@ -4,6 +4,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/firebase_options.dart';
 import 'package:after_hours/screens/auth/login_screen.dart';
+import 'package:after_hours/screens/auth/email_verification_screen.dart';
+import 'package:after_hours/screens/auth/username_setup_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:after_hours/screens/events/events_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,7 +38,26 @@ class AfterHoursApp extends StatelessWidget {
           contentTextStyle: TextStyle(color: Colors.white),
         ),
       ),
-      home: const LoginScreen(),
+      home: StreamBuilder<User?>( //streambuilder is a widget that listens to a stream, user? means either a user or null
+  stream: FirebaseAuth.instance.authStateChanges(),
+  builder: (context, snapshot) {
+    if (snapshot.connectionState == ConnectionState.waiting) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (snapshot.hasData) {
+      final user = snapshot.data!;
+      // a user who killed the app before verifying should still be sent to the
+      // verification screen, not straight into the app
+      if (!user.emailVerified) return const EmailVerificationScreen();
+      // a user who completed verification but not username setup goes there next
+      if ((user.displayName ?? '').isEmpty) return const UsernameSetupScreen();
+      return const EventsScreen(); //if logged in and fully set up, show events
+    }
+    return const LoginScreen(); //if not logged in, show login screen
+  },
+),
     );
   }
 }

@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/screens/events/events_screen.dart';
 import 'package:after_hours/screens/auth/username_setup_screen.dart';
+import 'package:after_hours/screens/auth/login_screen.dart';
 
 class EmailVerificationScreen extends StatefulWidget {
   const EmailVerificationScreen({super.key});
@@ -46,6 +47,8 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
           ),
         );
       }
+    } catch (_) {
+      // swallow network/token errors so the poll timer keeps running quietly
     } finally {
       if (mounted && !auto) setState(() => _checking = false);
     }
@@ -61,6 +64,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
         const SnackBar(content: Text('Verification email sent!')),
       );
       setState(() => _resendCooldown = 60);
+      _cooldownTimer?.cancel();
       _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (t) {
         if (!mounted) { t.cancel(); return; }
         setState(() => _resendCooldown--);
@@ -79,7 +83,10 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   Future<void> _signOut() async {
     await FirebaseAuth.instance.signOut();
     if (!mounted) return;
-    Navigator.of(context).popUntil((route) => route.isFirst);
+    Navigator.of(context).pushAndRemoveUntil(
+    MaterialPageRoute(builder: (_) => const LoginScreen()),
+    (route) => false,
+);
   }
 
   @override

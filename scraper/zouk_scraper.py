@@ -8,8 +8,12 @@ import json
 import firebase_admin
 from firebase_admin import credentials, firestore
 import re
+import os
+from dotenv import load_dotenv #import function from python-dotenv library (needs installation at pip install python-dotenv)
 
-ANTHROPIC_API_KEY = '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'
+load_dotenv() #reads .env and loads
+
+ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
 
 def extract_dj_with_claude(description):
     # use claude to extract just the DJ name(s) from the description text
@@ -37,7 +41,7 @@ Return only valid JSON, no explanation."""
     try:
         parsed = json.loads(response_text)
         return parsed.get("dj", "")
-    except:
+    except json.JSONDecodeError:
         return ""
 
 
@@ -80,13 +84,14 @@ def get_event_links(driver):
 
         seen.add(href)
 
-        venue_slug = href.split("/")[4]
+        parts = href.split("/")
+        venue_slug = parts[5] if len(parts) > 5 else "unknown" #venue_slug is the word in the url that identifies the venue eg. capital, and gets mapped to readable name via venue_map
         venue_map = {
             "capital": "Capital",
             "zouk": "Zouk Mainroom",
             "phuture": "Phuture",
         }
-        venue = venue_map.get(venue_slug, venue_slug.title())
+        venue = venue_map.get(venue_slug, venue_slug.title()) #if venueslug isnt in map, fallback, return it with the first letter capitalised
 
         events.append({
             "url": href,
@@ -179,10 +184,11 @@ def scrape_all_events():
     return results
 
 
-def write_to_firestore(events):
-    cred = credentials.Certificate("scraper/serviceAccountKey.json")
-    firebase_admin.initialize_app(cred)
-    db = firestore.client()
+def write_to_firestore(events): #only intialise if not initialised already
+    if not firebase_admin._apps: #this is a dict that gets an added entry everytime the app is intialised
+        cred = credentials.Certificate("scraper/serviceAccountKey.json")
+        firebase_admin.initialize_app(cred) #initialising the app mean handing firebase my service account credentials, its like logging in
+    db = firestore.client() #note: dont need to initialise for dart files because its done one already in main.dart
 
     for event in events:
         doc_id = event["name"].lower().replace(" ", "-") + "-" + event["date"]

@@ -31,7 +31,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadUserData() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    if (user == null) { setState(() => _loading = false); return; }
     final appUser = await UserService().getUser(user.uid);
     if (!mounted) return;
     setState(() {

@@ -41,7 +41,8 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
     setState(() => _submitting = true);
 
     try {
-      final user = FirebaseAuth.instance.currentUser!;
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) { _snack('Session expired — please sign in again.'); return; }
       await user.updateDisplayName(name);
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
         'display_name':    name,

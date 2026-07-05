@@ -3,11 +3,11 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/services/user_service.dart';
+import 'package:after_hours/services/post_service.dart';
 
 class CreatePostScreen extends StatefulWidget {
   const CreatePostScreen({super.key});
@@ -207,7 +207,13 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     setState(() => _submitting = true);
 
     try {
-      final user        = FirebaseAuth.instance.currentUser!;
+      final user        = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Session expired — please sign in again.')),
+        );
+        return;
+      }
       final displayName = user.displayName ?? user.email?.split('@').first ?? 'Raver';
       final appUser     = await UserService().getUser(user.uid);
       final username    = appUser?.username ?? '';
@@ -215,34 +221,21 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       final hours    = _hoursOut();
       final imageUrl = _imageFile != null ? await _uploadImage(user.uid) : '';
 
-      await FirebaseFirestore.instance.collection('posts').add({
-        'uid':           user.uid,
-        'display_name':  displayName,
-        'username':      username,
-        'caption':       caption,
-        'venue_tag':     venue,
-        'event_tag':     _eventController.text.trim(),
-        'rating':        _rating > 0 ? _rating : null,
-        'image_url':     imageUrl,
-        'likes':         [],
-        'comment_count': 0,
-        'puked':         _puked,
-        'night_date':    '${_date.year}-${_date.month.toString().padLeft(2, '0')}-${_date.day.toString().padLeft(2, '0')}',
-        'start_time':    _startTime != null ? _formatTime(_startTime!) : null,
-        'end_time':      _endTime   != null ? _formatTime(_endTime!)   : null,
-        'hours_out':     hours > 0 ? hours : null,
-        'created_at':    FieldValue.serverTimestamp(),
-      });
-
-      final Map<String, dynamic> updates = {
-        'events_this_month': FieldValue.increment(1),
-        'total_events':      FieldValue.increment(1),
-      };
-      if (hours > 0) updates['hours_this_month'] = FieldValue.increment(hours);
-      if (_puked)    updates['puke_count']        = FieldValue.increment(1);
-      if (venue.isNotEmpty) updates['clubs_visited'] = FieldValue.arrayUnion([venue]);
-
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).update(updates);
+      await PostService().createPost(
+        uid:         user.uid,
+        displayName: displayName,
+        username:    username,
+        caption:     caption,
+        venue:       venue,
+        eventTag:    _eventController.text.trim(),
+        rating:      _rating > 0 ? _rating : null,
+        imageUrl:    imageUrl,
+        puked:       _puked,
+        nightDate:   '${_date.year}-${_date.month.toString().padLeft(2, '0')}-${_date.day.toString().padLeft(2, '0')}',
+        startTime:   _startTime != null ? _formatTime(_startTime!) : null,
+        endTime:     _endTime   != null ? _formatTime(_endTime!)   : null,
+        hoursOut:    hours,
+      );
 
       if (!mounted) return;
       Navigator.of(context).pop();

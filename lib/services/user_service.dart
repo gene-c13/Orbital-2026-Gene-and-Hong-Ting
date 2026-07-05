@@ -70,12 +70,14 @@ class UserService {
     required bool isPublic,
     Uint8List? avatarBytes,
   }) async {
-    await FirebaseAuth.instance.currentUser?.updateDisplayName(displayName);
-
+    // upload avatar first — it's the most likely step to fail, and doing it
+    // before the Auth/Firestore writes means we never end up with a half-saved profile
     String? photoUrl;
     if (avatarBytes != null) {
       photoUrl = await _uploadAvatar(uid, avatarBytes);
     }
+
+    await FirebaseAuth.instance.currentUser?.updateDisplayName(displayName);
 
     final data = <String, dynamic>{
       'display_name':    displayName,
