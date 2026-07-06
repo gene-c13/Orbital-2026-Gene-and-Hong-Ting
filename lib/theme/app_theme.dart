@@ -64,6 +64,13 @@ const kGenres = <String>[
   'Dubstep', 'Pop', 'Reggaeton', 'Latin', 'Other',
 ];
 
+// ── Crowd level colour (shared by event cards and event detail) ──────────────
+Color crowdColor(String level) {
+  if (level == 'High')   return const Color(0xFFFF6B3D);
+  if (level == 'Medium') return const Color(0xFFE0C040);
+  return const Color(0xFF4CAF50);
+}
+
 // ── Bottom nav ────────────────────────────────────────────────────────────────
 const kNavItems = <BottomNavigationBarItem>[
   BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: 'Events'),

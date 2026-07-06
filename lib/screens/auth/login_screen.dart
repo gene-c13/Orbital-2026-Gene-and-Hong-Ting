@@ -74,6 +74,40 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose(); //calls parent class' cleanup, always goes last.
   }
 
+  // both fields share the same look, so the decoration lives in one place
+  // (same approach as _textField in register_screen.dart)
+  Widget _textField({
+    required TextEditingController controller,
+    required String hint,
+    TextInputType keyboard = TextInputType.text,
+    TextInputAction action = TextInputAction.next,
+    bool obscure = false,
+    Widget? suffix,
+    ValueChanged<String>? onSubmitted,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboard,
+      textInputAction: action,
+      obscureText: obscure,
+      onSubmitted: onSubmitted,
+      cursorColor: Colors.white,
+      selectionControls: materialTextSelectionControls,
+      style: const TextStyle(color: Colors.white),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: const TextStyle(color: Color(0x80FFFFFF)),
+        filled: true,
+        fillColor: const Color(0x26FFFFFF),
+        suffixIcon: suffix,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) { //frontend: building the UI layout
     return Scaffold( //scaffold is the standard full sceen container
@@ -118,53 +152,28 @@ class _LoginScreenState extends State<LoginScreen> {
                       const Text('Email',
                           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
-                      TextField(
+                      _textField(
                         controller: emailController, //the TextField class accpets controller as its paramater
-                        keyboardType: TextInputType.emailAddress,
-                        textInputAction: TextInputAction.next,
-                        cursorColor: Colors.white,
-                        selectionControls: materialTextSelectionControls,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: InputDecoration(
-                          hintText: 'your@email.com',
-                          hintStyle: const TextStyle(color: Color(0x80FFFFFF)),
-                          filled: true,
-                          fillColor: const Color(0x26FFFFFF),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
+                        hint: 'your@email.com',
+                        keyboard: TextInputType.emailAddress,
                       ),
                       const SizedBox(height: 16),
                       const Text('Password',
                           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
-                      TextField(
+                      _textField(
                         controller: passwordController,
-                        obscureText: _obscurePassword,
-                        textInputAction: TextInputAction.done,
-                        cursorColor: Colors.white,
-                        selectionControls: materialTextSelectionControls,
+                        hint: '••••••••',
+                        obscure: _obscurePassword,
+                        action: TextInputAction.done,
                         onSubmitted: (_) => _signIn(),
-                        style: const TextStyle(color: Colors.white),
-                        decoration: InputDecoration(
-                          hintText: '••••••••',
-                          hintStyle: const TextStyle(color: Color(0x80FFFFFF)),
-                          filled: true,
-                          fillColor: const Color(0x26FFFFFF),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
+                        suffix: IconButton(
+                          icon: Icon(
+                            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                            color: const Color(0x80FFFFFF),
+                            size: 20,
                           ),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                              color: const Color(0x80FFFFFF),
-                              size: 20,
-                            ),
-                            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                          ),
+                          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                         ),
                       ),
                       const SizedBox(height: 24),

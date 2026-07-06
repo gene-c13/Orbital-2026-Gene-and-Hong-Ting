@@ -363,11 +363,7 @@ Future<void> _launchBookingUrl(BuildContext context) async {
   }
 
   Widget _crowdBar(String level) {
-    final Color color = level == 'High'
-        ? const Color(0xFFFF6B3D)
-        : level == 'Medium'
-            ? const Color(0xFFE0C040)
-            : const Color(0xFF4CAF50);
+    final Color color = crowdColor(level);
 
     final int filled = level == 'High' ? 3 : level == 'Medium' ? 2 : 1;
     final String description = level == 'High'

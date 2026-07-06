@@ -3,6 +3,7 @@ import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/services/auth_service.dart';
 import 'package:after_hours/screens/events/events_screen.dart';
 import 'package:after_hours/widgets/app_text_field.dart';
+import 'package:after_hours/widgets/genre_picker.dart';
 import 'package:after_hours/widgets/primary_button.dart';
 
 class UsernameSetupScreen extends StatefulWidget {
@@ -62,55 +63,9 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
 
   void _showGenrePicker() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: kSheet,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 12),
-          Container(
-            width: 40, height: 4,
-            decoration: BoxDecoration(
-              color: const Color(0x44FFFFFF),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'Favourite genre',
-            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 12),
-          Flexible(
-            child: ListView(
-              shrinkWrap: true,
-              children: kGenres.map((genre) {
-                final selected = genre == _selectedGenre;
-                return ListTile(
-                  title: Text(
-                    genre,
-                    style: TextStyle(
-                      color: selected ? kAccent : Colors.white,
-                      fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-                    ),
-                  ),
-                  trailing: selected ? const Icon(Icons.check, color: kAccent, size: 18) : null,
-                  onTap: () {
-                    setState(() => _selectedGenre = genre);
-                    Navigator.of(ctx).pop();
-                  },
-                );
-              }).toList(),
-            ),
-          ),
-          const SizedBox(height: 16),
-        ],
-      ),
-    );
+    showGenrePicker(context, _selectedGenre, (genre) {
+      setState(() => _selectedGenre = genre);
+    });
   }
 
   @override

@@ -153,13 +153,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return StreamBuilder<QuerySnapshot>(
       stream: FriendService().incomingRequests(currentUid),
       builder: (context, snapshot) {
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const SizedBox.shrink();
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) { //data! means im sure data is not null, because we checked it already with hasData
+          return const SizedBox.shrink(); //sizedbox.shrink() just means return nothing
         }
 
-        final requests = snapshot.data!.docs;
+        final requests = snapshot.data!.docs; //store all requests documents (lists)
         final fromUids = requests
-            .map((doc) => (doc.data() as Map<String, dynamic>)['from_uid'] as String)
+            .map((doc) => (doc.data() as Map<String, dynamic>)['from_uid'] as String) //document data is returned as a generic object, this tells Dart to treat it 
+                                                                                      //as a key value map so can access fields by name
             .toList();
 
         // Fetch every requester's profile in one batched call instead of
@@ -167,7 +168,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return FutureBuilder<List<AppUser>>(
           future: UserService().getUsers(fromUids),
           builder: (context, usersSnap) {
-            if (!usersSnap.hasData) return const SizedBox.shrink();
+            if (!usersSnap.hasData) return const SizedBox.shrink(); //sizedbox.shrink() just means return nothing
 
             final usersByUid = <String, AppUser>{};
             for (final u in usersSnap.data!) {

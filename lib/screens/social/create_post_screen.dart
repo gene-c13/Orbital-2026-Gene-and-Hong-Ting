@@ -7,6 +7,7 @@ import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/services/auth_service.dart';
 import 'package:after_hours/services/user_service.dart';
 import 'package:after_hours/services/post_service.dart';
+import 'package:after_hours/widgets/image_source_sheet.dart';
 import 'package:after_hours/widgets/primary_button.dart';
 import 'package:after_hours/utils/time_format.dart';
 
@@ -125,37 +126,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   }
 
   Future<void> _pickImage() async {
-    final source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      backgroundColor: kSheet,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 18, 16, 6),
-              child: Text('Add a photo',
-                  style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700)),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_camera_outlined, color: kAccent),
-              title: const Text('Take photo', style: TextStyle(color: Colors.white)),
-              onTap: () => Navigator.of(ctx).pop(ImageSource.camera),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined, color: kAccent),
-              title: const Text('Choose from gallery', style: TextStyle(color: Colors.white)),
-              onTap: () => Navigator.of(ctx).pop(ImageSource.gallery),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-    if (source == null) return;
+    final source = await showImageSourceSheet(context, 'Add a photo');
+    if (source == null || !mounted) return;
 
     final picked = await ImagePicker().pickImage(source: source, maxWidth: 1600, imageQuality: 85);
     if (picked != null) setState(() => _imageFile = picked);

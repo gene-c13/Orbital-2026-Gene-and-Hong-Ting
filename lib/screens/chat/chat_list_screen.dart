@@ -11,6 +11,13 @@ import 'package:after_hours/widgets/user_avatar.dart';
 class ChatListScreen extends StatelessWidget { //stateless because the streambuilder handles its own live updates internally
   const ChatListScreen({super.key}); //identify the widget so it can track it across rebuilds
 
+  // the participant in a chat doc that isn't me — used both when collecting
+  // uids for the batch fetch and when building each row
+  String _otherUid(Map<String, dynamic> chatData, String currentUid) {
+    final participants = List<String>.from(chatData['participants'] ?? []);
+    return participants.firstWhere((uid) => uid != currentUid, orElse: () => '');
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentUid = AuthService().currentUid ?? '';
@@ -71,14 +78,10 @@ class ChatListScreen extends StatelessWidget { //stateless because the streambui
                     }
 
                     // collect the other-user uid from each chat doc
-                    final otherUids = docs.map((doc) {
-                      final d = doc.data() as Map<String, dynamic>;
-                      final participants = List<String>.from(d['participants'] ?? []);
-                      return participants.firstWhere(
-                        (uid) => uid != currentUid,
-                        orElse: () => '',
-                      );
-                    }).where((uid) => uid.isNotEmpty).toList();
+                    final otherUids = docs
+                        .map((doc) => _otherUid(doc.data() as Map<String, dynamic>, currentUid))
+                        .where((uid) => uid.isNotEmpty)
+                        .toList();
 
                     // one batch fetch for all participants, not one per row
                     return FutureBuilder<List<AppUser>>(
@@ -97,11 +100,7 @@ class ChatListScreen extends StatelessWidget { //stateless because the streambui
                           itemCount: docs.length,
                           itemBuilder: (context, index) {
                             final data = docs[index].data() as Map<String, dynamic>;
-                            final participants = List<String>.from(data['participants'] ?? []);
-                            final otherUid = participants.firstWhere(
-                              (uid) => uid != currentUid,
-                              orElse: () => '',
-                            );
+                            final otherUid = _otherUid(data, currentUid);
                             final other = userMap[otherUid];
                             if (other == null) return const SizedBox.shrink();
 

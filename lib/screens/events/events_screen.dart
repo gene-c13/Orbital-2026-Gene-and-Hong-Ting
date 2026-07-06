@@ -20,7 +20,6 @@ class EventsScreen extends StatefulWidget {
 class _EventsScreenState extends State<EventsScreen> {
   DateTime selectedDate = DateTime.now();
   final EventService _eventService = EventService();
-  final AttendanceService _attendanceService = AttendanceService();
 
   bool _searching = false;
   String _query = '';
@@ -30,10 +29,14 @@ class _EventsScreenState extends State<EventsScreen> {
   // not on every rebuild (every keystroke, every setState)
   late Stream<List<Event>> _dayStream;
 
+  // search results stream, made once here for the same reason
+  late Stream<List<Event>> _searchStream;
+
   @override
   void initState() {
     super.initState();
     _dayStream = _eventService.getEventsByDateStream(_dateKey);
+    _searchStream = _eventService.getAllEventsStream();
   }
 
   @override
@@ -67,10 +70,12 @@ class _EventsScreenState extends State<EventsScreen> {
         child: child!,
       ),
     );
-    if (picked != null) setState(() {
+    if (picked != null) {
+      setState(() {
       selectedDate = picked;
       _dayStream = _eventService.getEventsByDateStream(_dateKey); // recreate stream for picked date
     });
+    }
   }
 
   void _changeDay(int days) {
@@ -269,7 +274,11 @@ class _EventsScreenState extends State<EventsScreen> {
       child: Container(
         margin: const EdgeInsets.only(bottom: 14),
         padding: const EdgeInsets.fromLTRB(18, 16, 16, 16),
-        decoration: kCardDecoration,
+        decoration: BoxDecoration(
+          color: kSurface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: kBorder),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -329,26 +338,215 @@ class _EventsScreenState extends State<EventsScreen> {
                 _crowdBadge(event.crowdLevel),
               ],
             ),
-            _attendanceSnippet(event.id),
+            _AttendanceSnippet(eventId: event.id),
           ],
         ),
       ),
     );
   }
 
-  /// "John, Emma, and 3 others are going!" with up to 3 overlapping profile
-  /// pictures — hidden entirely if no one's marked themselves attending yet.
-  Widget _attendanceSnippet(String eventId) {
-    if (eventId.isEmpty) return const SizedBox.shrink();
+  Widget _dot() => const Padding(
+    padding: EdgeInsets.symmetric(horizontal: 6),
+    child: Text('·', style: TextStyle(color: kDim, fontSize: 14)),
+  );
+
+  Widget _guestlistBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: kAccent,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.bolt, color: Colors.white, size: 12),
+          SizedBox(width: 2),
+          Text('GL', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
+        ],
+      ),
+    );
+  }
+
+  Widget _crowdBadge(String level) {
+    final Color color = crowdColor(level);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.6)),
+      ),
+      child: Text(
+        level.toUpperCase(),
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.6,
+        ),
+      ),
+    );
+  }
+
+  Widget _genreTag(String genre) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: kAccent.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(genre, style: const TextStyle(color: kMuted, fontSize: 11, fontWeight: FontWeight.w600)),
+    );
+  }
+
+  bool _matches(Event e, String q) {
+    final query = q.toLowerCase().trim();
+    return e.name.toLowerCase().contains(query)
+        || e.venue.toLowerCase().contains(query)
+        || e.dj.toLowerCase().contains(query)
+        || e.genres.any((g) => g.toLowerCase().contains(query));
+  }
+
+  Widget _buildSearchResults() {
+    if (_query.trim().isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.search, color: kDim, size: 56),
+            const SizedBox(height: 18),
+            const Text(
+              'Search every night.',
+              style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 8),
+            const Text('By venue, DJ, or genre.', style: TextStyle(color: kDim, fontSize: 13)),
+          ],
+        ),
+      );
+    }
+
+    return StreamBuilder<List<Event>>(
+      stream: _searchStream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: kAccent, strokeWidth: 2));
+        }
+        if (snapshot.hasError) {
+          return const Center(child: Text('Something went wrong.', style: TextStyle(color: kMuted)));
+        }
+
+        final all = snapshot.data ?? [];
+        final results = all.where((e) => _matches(e, _query)).toList();
+
+        if (results.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.search_off, color: kDim, size: 56),
+                const SizedBox(height: 18),
+                Text(
+                  'No matches for "$_query".',
+                  style: const TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w800),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                const Text('Try a venue, DJ, or genre.', style: TextStyle(color: kDim, fontSize: 13)),
+              ],
+            ),
+          );
+        }
+
+        final groups = <String, List<Event>>{};
+        for (final e in results) {
+          groups.putIfAbsent(e.date, () => []).add(e);
+        }
+
+        final children = <Widget>[];
+        groups.forEach((date, events) {
+          children.add(_dateHeader(date));
+          children.addAll(events.map(_eventCard));
+        });
+
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+          children: children,
+        );
+      },
+    );
+  }
+
+  Widget _dateHeader(String date) {
+    final parsed = DateTime.tryParse(date);
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final isToday = date == today;
+    String label = date;
+    if (parsed != null) {
+      final formatted = DateFormat('EEE d MMM').format(parsed).toUpperCase();
+      label = isToday ? 'TONIGHT · $formatted' : formatted;
+    }
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 10),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: isToday ? kAccent : kMuted,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.5,
+        ),
+      ),
+    );
+  }
+}
+
+/// "John, Emma, and 3 others are going!" with up to 3 overlapping profile
+/// pictures — hidden entirely if no one's marked themselves attending yet.
+class _AttendanceSnippet extends StatefulWidget {
+  final String eventId;
+  const _AttendanceSnippet({required this.eventId});
+
+  @override
+  State<_AttendanceSnippet> createState() => _AttendanceSnippetState();
+}
+
+class _AttendanceSnippetState extends State<_AttendanceSnippet> {
+  // stream and future kept in state so scrolling the list doesn't keep
+  // re-subscribing and re-fetching the same profiles (same trick as
+  // _AttendeePreview in event_detail_screen.dart)
+  Stream<List<String>>? _uidsStream;
+  Future<List<AppUser>>? _usersFuture;
+  int _lastCount = -1; // how many attendees we last fetched profiles for
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.eventId.isNotEmpty) {
+      _uidsStream = AttendanceService().attendeeUidsStream(widget.eventId);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_uidsStream == null) return const SizedBox.shrink();
 
     return StreamBuilder<List<String>>(
-      stream: _attendanceService.attendeeUidsStream(eventId),
+      stream: _uidsStream,
       builder: (context, snapshot) {
         final uids = snapshot.data ?? [];
         if (uids.isEmpty) return const SizedBox.shrink();
 
+        // only fetch profiles again when the attendee count changes,
+        // not every rebuild (same trick as _lastMessageCount in chat_screen)
+        if (uids.length != _lastCount) {
+          _lastCount = uids.length;
+          _usersFuture = UserService().getUsers(uids.take(3).toList());
+        }
+
         return FutureBuilder<List<AppUser>>(
-          future: UserService().getUsers(uids.take(3).toList()),
+          future: _usersFuture,
           builder: (context, userSnap) {
             final users = userSnap.data ?? [];
             if (users.isEmpty) return const SizedBox.shrink();
@@ -426,165 +624,5 @@ class _EventsScreenState extends State<EventsScreen> {
     return others > 0
         ? '${names[0]}, ${names[1]}, and $others $othersLabel are going!'
         : '${names[0]} and ${names[1]} are going!';
-  }
-
-  Widget _dot() => const Padding(
-    padding: EdgeInsets.symmetric(horizontal: 6),
-    child: Text('·', style: TextStyle(color: kDim, fontSize: 14)),
-  );
-
-  Widget _guestlistBadge() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-      decoration: BoxDecoration(
-        color: kAccent,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: const Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.bolt, color: Colors.white, size: 12),
-          SizedBox(width: 2),
-          Text('GL', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
-        ],
-      ),
-    );
-  }
-
-  Widget _crowdBadge(String level) {
-    final Color color = level == 'High'
-        ? const Color(0xFFFF6B3D)
-        : level == 'Medium'
-            ? const Color(0xFFE0C040)
-            : const Color(0xFF4CAF50);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.6)),
-      ),
-      child: Text(
-        level.toUpperCase(),
-        style: TextStyle(
-          color: color,
-          fontSize: 10,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.6,
-        ),
-      ),
-    );
-  }
-
-  Widget _genreTag(String genre) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-      decoration: BoxDecoration(
-        color: kAccent.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(genre, style: const TextStyle(color: kMuted, fontSize: 11, fontWeight: FontWeight.w600)),
-    );
-  }
-
-  bool _matches(Event e, String q) {
-    final query = q.toLowerCase().trim();
-    return e.name.toLowerCase().contains(query)
-        || e.venue.toLowerCase().contains(query)
-        || e.dj.toLowerCase().contains(query)
-        || e.genres.any((g) => g.toLowerCase().contains(query));
-  }
-
-  Widget _buildSearchResults() {
-    if (_query.trim().isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.search, color: kDim, size: 56),
-            const SizedBox(height: 18),
-            const Text(
-              'Search every night.',
-              style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 8),
-            const Text('By venue, DJ, or genre.', style: TextStyle(color: kDim, fontSize: 13)),
-          ],
-        ),
-      );
-    }
-
-    return StreamBuilder<List<Event>>(
-      stream: _eventService.getAllEventsStream(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: kAccent, strokeWidth: 2));
-        }
-        if (snapshot.hasError) {
-          return const Center(child: Text('Something went wrong.', style: TextStyle(color: kMuted)));
-        }
-
-        final all = snapshot.data ?? [];
-        final results = all.where((e) => _matches(e, _query)).toList();
-
-        if (results.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.search_off, color: kDim, size: 56),
-                const SizedBox(height: 18),
-                Text(
-                  'No matches for "$_query".',
-                  style: const TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w800),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                const Text('Try a venue, DJ, or genre.', style: TextStyle(color: kDim, fontSize: 13)),
-              ],
-            ),
-          );
-        }
-
-        final groups = <String, List<Event>>{};
-        for (final e in results) {
-          groups.putIfAbsent(e.date, () => []).add(e);
-        }
-
-        final children = <Widget>[];
-        groups.forEach((date, events) {
-          children.add(_dateHeader(date));
-          children.addAll(events.map(_eventCard));
-        });
-
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-          children: children,
-        );
-      },
-    );
-  }
-
-  Widget _dateHeader(String date) {
-    final parsed = DateTime.tryParse(date);
-    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    final isToday = date == today;
-    String label = date;
-    if (parsed != null) {
-      final formatted = DateFormat('EEE d MMM').format(parsed).toUpperCase();
-      label = isToday ? 'TONIGHT · $formatted' : formatted;
-    }
-    return Padding(
-      padding: const EdgeInsets.only(top: 8, bottom: 10),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: isToday ? kAccent : kMuted,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 1.5,
-        ),
-      ),
-    );
   }
 }

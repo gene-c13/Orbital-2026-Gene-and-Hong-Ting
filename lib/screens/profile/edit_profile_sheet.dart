@@ -5,6 +5,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/services/user_service.dart';
 import 'package:after_hours/widgets/app_text_field.dart';
+import 'package:after_hours/widgets/genre_picker.dart';
+import 'package:after_hours/widgets/image_source_sheet.dart';
 import 'package:after_hours/widgets/primary_button.dart';
 
 class EditProfileSheet extends StatefulWidget {
@@ -62,39 +64,8 @@ class _EditProfileSheetState extends State<EditProfileSheet> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
 
   Future<void> _pickAvatar() async {
-    final source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      backgroundColor: kSheet,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 18, 16, 6),
-              child: Text(
-                'Update photo',
-                style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700),
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_camera_outlined, color: kAccent),
-              title: const Text('Take photo', style: TextStyle(color: Colors.white)),
-              onTap: () => Navigator.of(ctx).pop(ImageSource.camera),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined, color: kAccent),
-              title: const Text('Choose from gallery', style: TextStyle(color: Colors.white)),
-              onTap: () => Navigator.of(ctx).pop(ImageSource.gallery),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-    if (source == null) return;
+    final source = await showImageSourceSheet(context, 'Update photo');
+    if (source == null || !mounted) return;
 
     final picked = await ImagePicker().pickImage(source: source, maxWidth: 800, imageQuality: 85);
     if (picked == null) return;
@@ -106,55 +77,9 @@ class _EditProfileSheetState extends State<EditProfileSheet> {
   }
 
   void _showGenrePicker() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: kSheet,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 12),
-          Container(
-            width: 40, height: 4,
-            decoration: BoxDecoration(
-              color: const Color(0x44FFFFFF),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'Favourite genre',
-            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 12),
-          Flexible(
-            child: ListView(
-              shrinkWrap: true,
-              children: kGenres.map((genre) {
-                final selected = genre == _selectedGenre;
-                return ListTile(
-                  title: Text(
-                    genre,
-                    style: TextStyle(
-                      color:      selected ? kAccent : Colors.white,
-                      fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-                    ),
-                  ),
-                  trailing: selected ? const Icon(Icons.check, color: kAccent, size: 18) : null,
-                  onTap: () {
-                    setState(() => _selectedGenre = genre);
-                    Navigator.of(ctx).pop();
-                  },
-                );
-              }).toList(),
-            ),
-          ),
-          const SizedBox(height: 16),
-        ],
-      ),
-    );
+    showGenrePicker(context, _selectedGenre, (genre) {
+      setState(() => _selectedGenre = genre);
+    });
   }
 
 Future<void> _save() async {
