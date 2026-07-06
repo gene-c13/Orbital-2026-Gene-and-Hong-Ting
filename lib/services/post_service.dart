@@ -149,12 +149,13 @@ class PostService {
     }
   }
 
-  Future<void> addComment(String postId, String uid, String username, String text) async {
+  Future<void> addComment(String postId, String uid, String username, String text, String? photoUrl) async {
     final batch = _db.batch();
     final commentRef = _db.collection('posts').doc(postId).collection('comments').doc();
     batch.set(commentRef, {
       'uid': uid,
       'username': username,
+      'photo_url':photoUrl,
       'text': text,
       'created_at': FieldValue.serverTimestamp(),
     });

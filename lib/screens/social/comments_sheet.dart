@@ -4,6 +4,9 @@ import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/services/auth_service.dart';
 import 'package:after_hours/services/post_service.dart';
 import 'package:after_hours/utils/time_format.dart';
+import 'package:after_hours/screens/social/other_user_profile_view.dart';
+import 'package:after_hours/services/user_service.dart';
+import 'package:after_hours/widgets/user_avatar.dart';
 
 class CommentsSheet extends StatefulWidget {
   final String postId;
@@ -32,9 +35,11 @@ class _CommentsSheetState extends State<CommentsSheet> {
 
     setState(() => _sending = true);
     final username = auth.currentDisplayName;
+    final appUser = await UserService().getUser(user.uid);
+
 
     try {
-      await PostService().addComment(widget.postId, user.uid, username, text);
+      await PostService().addComment(widget.postId, user.uid, username, text, appUser?.photoUrl);
       _controller.clear();
     } catch (e) {
       if (mounted) {
@@ -155,21 +160,29 @@ class _CommentsSheetState extends State<CommentsSheet> {
     );
   }
 
-  Widget _commentTile(Map<String, dynamic> c) {
-    final username = c['username'] as String? ?? 'Raver';
+    Widget _commentTile(Map<String, dynamic> c) {
+    final uid = c['uid'] as String? ?? ''; //give me the uid but if null give me ''
+    final username = c['username'] as String? ?? 'Clubber';
     final text = c['text'] as String? ?? '';
+    final photoUrl = c['photo_url'] as String?;
     final ts = c['created_at'] as Timestamp?;
+
+    void openProfile() { //defining function that opens other user's profile
+      if (uid.isEmpty) return;
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => OtherUserProfileView(uid: uid)),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 16,
-            backgroundColor: kAccent.withValues(alpha: 0.3),
-            child: Text(username.isNotEmpty ? username[0].toUpperCase() : '?',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
-          ),
+          GestureDetector( //detects tap
+            onTap: openProfile,
+            child: UserAvatar(photoUrl: photoUrl, displayName: username, radius: 16),
+            ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -177,8 +190,11 @@ class _CommentsSheetState extends State<CommentsSheet> {
               children: [
                 Row(
                   children: [
-                    Text(username,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
+                    GestureDetector(
+                      onTap: openProfile,
+                      child: Text(username,
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
+                    ),
                     const SizedBox(width: 8),
                     Text(timeAgo(ts), style: const TextStyle(color: kDim, fontSize: 11)),
                   ],
@@ -193,3 +209,8 @@ class _CommentsSheetState extends State<CommentsSheet> {
     );
   }
 }
+
+
+
+
+
