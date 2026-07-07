@@ -9,6 +9,7 @@ import 'package:after_hours/screens/social/comments_sheet.dart';
 import 'package:after_hours/screens/social/user_search_screen.dart';
 import 'package:after_hours/services/post_service.dart';
 import 'package:after_hours/widgets/user_avatar.dart';
+import 'package:after_hours/widgets/tap_to_profile.dart';
 import 'package:after_hours/utils/time_format.dart';
 import 'dart:async';
 import 'package:after_hours/services/auth_service.dart';
@@ -226,10 +227,13 @@ class _PostCardState extends State<_PostCard> {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             child: Row(
               children: [
-                UserAvatar(
-                  displayName: displayName,
-                  photoUrl: data['photo_url'] as String?,
-                  radius: 20,
+                TapToProfile(
+                  uid: data['uid'] as String? ?? '',
+                  child: UserAvatar(
+                    displayName: displayName,
+                    photoUrl: data['photo_url'] as String?,
+                    radius: 20,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
