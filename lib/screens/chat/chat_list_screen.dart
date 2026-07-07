@@ -7,6 +7,7 @@ import 'package:after_hours/services/user_service.dart';
 import 'package:after_hours/models/user.dart';
 import 'package:after_hours/screens/chat/chat_screen.dart';
 import 'package:after_hours/widgets/user_avatar.dart';
+import 'package:after_hours/widgets/navigation_helper.dart';
 
 class ChatListScreen extends StatelessWidget { //stateless because the streambuilder handles its own live updates internally
   const ChatListScreen({super.key}); //identify the widget so it can track it across rebuilds
@@ -23,6 +24,7 @@ class ChatListScreen extends StatelessWidget { //stateless because the streambui
     final currentUid = AuthService().currentUid ?? '';
 
     return Scaffold(
+      bottomNavigationBar: buildNavBar(0, (i) { if (i != 2) goToTab(context, i); }),
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -34,11 +36,6 @@ class ChatListScreen extends StatelessWidget { //stateless because the streambui
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
                 child: Row(
                   children: [
-                    GestureDetector(
-                      onTap: () => Navigator.of(context).pop(),
-                      child: const Icon(Icons.arrow_back, color: Colors.white),
-                    ),
-                    const SizedBox(width: 16),
                     Text('MESSAGES', style: kNectarine(size: 24, letterSpacing: 3)),
                   ],
                 ),

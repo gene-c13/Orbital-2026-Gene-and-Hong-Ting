@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:after_hours/screens/chat/chat_list_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:after_hours/screens/events/events_screen.dart';
@@ -7,16 +8,12 @@ import 'package:after_hours/screens/profile/profile_screen.dart';
 import 'package:after_hours/screens/auth/login_screen.dart';
 
 void goToTab(BuildContext context, int targetIndex) {
-  if (targetIndex == 2) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Marketplace — coming soon!')),
-    );
-    return;
-  }
 
   Widget screen;
   if (targetIndex == 1) {
     screen = const SocialScreen();
+  } else if (targetIndex == 2) {
+    screen = const ChatListScreen();
   } else if (targetIndex == 3) {
     screen = const ProfileScreen();
   } else {
