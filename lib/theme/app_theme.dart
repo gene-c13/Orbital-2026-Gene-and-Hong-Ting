@@ -75,7 +75,7 @@ Color crowdColor(String level) {
 const kNavItems = <BottomNavigationBarItem>[
   BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: 'Events'),
   BottomNavigationBarItem(icon: Icon(Icons.people),         label: 'Social'),
-  BottomNavigationBarItem(icon: Icon(Icons.shopping_bag),   label: 'Marketplace'),
+  BottomNavigationBarItem(icon: Icon(Icons.chat_bubble),   label: 'Chats'),
   BottomNavigationBarItem(icon: Icon(Icons.person),         label: 'Profile'),
 ];
 
