@@ -135,15 +135,50 @@ class _OtherUserProfileViewState extends State<OtherUserProfileView> {
         final pending = snapshot.data![1] || _requestSent;
 
         if (alreadyFriend) {
-          return _fullWidthButton('Message', () async {
-            await ChatService().getOrCreateChat(currentUid, appUser.uid);
-            if (!context.mounted) return;
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => ChatScreen(otherUid: appUser.uid, otherDisplayName: appUser.name),
+          return Column(
+            children: [
+              _fullWidthButton('Message', () async {
+                await ChatService().getOrCreateChat(currentUid, appUser.uid);
+                if (!context.mounted) return;
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ChatScreen(otherUid: appUser.uid, otherDisplayName: appUser.name),
+                  ),
+                );
+              }),
+              const SizedBox(height: 10),
+              TextButton(
+                onPressed: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      backgroundColor: kSheet,
+                      title: const Text('Unfriend?', style: TextStyle(color: Colors.white)),
+                      content: Text(
+                        'You and ${appUser.name} will no longer be friends.',
+                        style: const TextStyle(color: kDim),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(false),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(true),
+                          child: const Text('Unfriend', style: TextStyle(color: Colors.redAccent)),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirmed == true) {
+                    await _friendService.unfriend(currentUid, appUser.uid);
+                    if (mounted) setState(() {});
+                  }
+                },
+                child: const Text('Unfriend', style: TextStyle(color: Colors.redAccent)),
               ),
-            );
-          });
+            ],
+          );
         }
 
         if (pending) {

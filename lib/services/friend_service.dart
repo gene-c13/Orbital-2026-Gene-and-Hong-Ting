@@ -76,6 +76,16 @@ class FriendService {
     return doc.exists;
   }
 
+  Future<void> unfriend(String uid, String otherUid) async {
+    final isCurrentlyFriend = await isFriend(uid, otherUid);
+    if (!isCurrentlyFriend) return;
+
+    final batch = _db.batch();
+    batch.delete(_db.collection('users').doc(uid).collection('friends').doc(otherUid));
+    batch.delete(_db.collection('users').doc(otherUid).collection('friends').doc(uid));
+    await batch.commit();
+  }
+
   Stream<QuerySnapshot> friendsStream(String uid) {
     return _db
         .collection('users')
