@@ -24,7 +24,7 @@ class ChatListScreen extends StatelessWidget { //stateless because the streambui
     final currentUid = AuthService().currentUid ?? '';
 
     return Scaffold(
-      bottomNavigationBar: buildNavBar(0, (i) { if (i != 2) goToTab(context, i); }),
+      bottomNavigationBar: buildNavBar(2, (i) { if (i != 2) goToTab(context, i); }),
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -48,9 +48,11 @@ class ChatListScreen extends StatelessWidget { //stateless because the streambui
                     if (snapshot.connectionState == ConnectionState.waiting) { //show spinner while Firestore fetches first batch of data
                       return const Center(
                         child: CircularProgressIndicator(color: kAccent, strokeWidth: 2),
+                        
                       );
+                     
                     }
-
+                    if (snapshot.hasError) return Center(child: SelectableText('${snapshot.error}'));
                     final docs = snapshot.data?.docs ?? [];
 
                     if (docs.isEmpty) {
@@ -103,7 +105,10 @@ class ChatListScreen extends StatelessWidget { //stateless because the streambui
 
                             final lastMessage = data['last_message'] as String? ?? '';
 
-                            return ListTile(
+                            return Container(
+                              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                              decoration: kCardDecoration,
+                              child:ListTile(
                               contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
                               leading: UserAvatar(displayName: other.name, photoUrl: other.photoUrl, radius: 24),
                               title: Text(
@@ -124,7 +129,8 @@ class ChatListScreen extends StatelessWidget { //stateless because the streambui
                                   ),
                                 ),
                               ),
-                            );
+                            )
+                          );  
                           },
                         );
                       },
