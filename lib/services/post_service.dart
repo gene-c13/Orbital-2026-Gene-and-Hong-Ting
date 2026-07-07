@@ -149,6 +149,21 @@ class PostService {
     }
   }
 
+  // keeps existing posts in sync when the account-level privacy setting changes,
+// so old posts don't keep whatever visibility they were created with
+  Future<void> syncVisibility(String uid, bool isPublic) async {
+    final ownPosts = await _db
+        .collection('posts')
+        .where('uid', isEqualTo: uid)
+        .get(); //look for all posts by user
+
+    final batch = _db.batch();
+    for (final doc in ownPosts.docs) { //iterate and update every post's isPublic field
+      batch.update(doc.reference, {'is_public': isPublic});
+    }
+    await batch.commit();
+  }
+
   Future<void> addComment(String postId, String uid, String username, String text, String? photoUrl) async {
     final batch = _db.batch();
     final commentRef = _db.collection('posts').doc(postId).collection('comments').doc();

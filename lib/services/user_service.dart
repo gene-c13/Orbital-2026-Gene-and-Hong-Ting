@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:after_hours/models/user.dart';
+import 'package:after_hours/services/post_service.dart';
 
 /// Centralises reads and writes of the `users` collection so screens work
 /// with typed [AppUser] objects instead of raw Firestore maps (same role
@@ -88,6 +89,7 @@ class UserService {
     };
     if (photoUrl != null) data['photo_url'] = photoUrl;
 
-    await _usersCollection.doc(uid).set(data, SetOptions(merge: true));
+    await _usersCollection.doc(uid).set(data, SetOptions(merge: true)); //updating doc with new fields, .set is safer than .update as latter requires doc to exist alr
+    await PostService().syncVisibility(uid, isPublic);  
   }
 }
