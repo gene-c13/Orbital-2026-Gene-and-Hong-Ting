@@ -1,3 +1,4 @@
+import 'package:after_hours/widgets/tap_to_profile.dart';
 import 'package:flutter/material.dart';
 import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/services/auth_service.dart';
@@ -130,17 +131,26 @@ class _AttendeeTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-          UserAvatar(
-            photoUrl: user.photoUrl,
-            displayName: user.name,
-            radius: 20,
-          ),
-          const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              user.name,
-              style: const TextStyle(
-                color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700,
+            child: TapToProfile(
+              uid: user.uid,
+              child: Row(
+                children: [
+                  UserAvatar(
+                    photoUrl: user.photoUrl,
+                    displayName: user.name,
+                    radius: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      user.name,
+                      style: const TextStyle(
+                        color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

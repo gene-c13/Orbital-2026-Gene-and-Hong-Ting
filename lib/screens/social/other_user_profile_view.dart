@@ -186,8 +186,16 @@ class _OtherUserProfileViewState extends State<OtherUserProfileView> {
         }
 
         return _fullWidthButton('Add friend', () async {
-          await _friendService.sendFriendRequest(currentUid, appUser.uid);
-          setState(() => _requestSent = true);
+          try {
+            await _friendService.sendFriendRequest(currentUid, appUser.uid);
+            if (mounted) setState(() => _requestSent = true);
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Couldn\'t send request: $e')),
+              );
+            }
+          }
         });
       },
     );

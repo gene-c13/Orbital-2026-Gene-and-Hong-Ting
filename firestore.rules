@@ -60,8 +60,13 @@ service cloud.firestore {
       allow create: if request.auth != null
                     && request.resource.data.from_uid == request.auth.uid;
       allow update: if request.auth != null
-                    && resource.data.to_uid == request.auth.uid
-                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+                    && (
+                      (resource.data.to_uid == request.auth.uid
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']))
+                      || (resource.data.from_uid == request.auth.uid
+                        && request.resource.data.status == 'pending'
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'created_at']))
+                    );
     }
     match /users/{uid}/friends/{friendUid} {
       allow read: if request.auth != null;

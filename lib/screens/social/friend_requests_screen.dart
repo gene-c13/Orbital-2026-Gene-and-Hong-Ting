@@ -6,6 +6,7 @@ import 'package:after_hours/services/auth_service.dart';
 import 'package:after_hours/services/user_service.dart';
 import 'package:after_hours/models/user.dart';
 import 'package:after_hours/widgets/user_avatar.dart';
+import 'package:after_hours/widgets/tap_to_profile.dart';
 
 class FriendRequestsScreen extends StatelessWidget {
   const FriendRequestsScreen({super.key});
@@ -91,16 +92,25 @@ class FriendRequestsScreen extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        UserAvatar(
-                          photoUrl: requester?.photoUrl,
-                          displayName: username,
-                          radius: 20,
-                        ),
-                        const SizedBox(width: 12),
                         Expanded(
-                          child: Text(
-                            username,
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                          child: TapToProfile(
+                            uid: fromUid,
+                            child: Row(
+                              children: [
+                                UserAvatar(
+                                  photoUrl: requester?.photoUrl,
+                                  displayName: username,
+                                  radius: 20,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    username,
+                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                         TextButton(

@@ -8,6 +8,7 @@ import 'package:after_hours/models/user.dart';
 import 'package:after_hours/screens/chat/chat_screen.dart';
 import 'package:after_hours/widgets/user_avatar.dart';
 import 'package:after_hours/widgets/navigation_helper.dart';
+import 'package:after_hours/widgets/tap_to_profile.dart';
 
 
 class ChatListScreen extends StatelessWidget { //stateless because the streambuilder handles its own live updates internally
@@ -111,7 +112,10 @@ class ChatListScreen extends StatelessWidget { //stateless because the streambui
                               decoration: kCardDecoration,
                               child:ListTile(
                               contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-                              leading: UserAvatar(displayName: other.name, photoUrl: other.photoUrl, radius: 24),
+                              leading: TapToProfile(
+                                uid: otherUid,
+                                child: UserAvatar(displayName: other.name, photoUrl: other.photoUrl, radius: 24),
+                              ),
                               title: Text(
                                 other.name,
                                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
