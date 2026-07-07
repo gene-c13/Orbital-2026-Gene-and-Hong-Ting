@@ -58,6 +58,7 @@ scraper/after_hours.session.firebase/
 
 scraper/.env 
 TASKS.md
-product.md
-design.md
-claude.md
+PRODUCT.md
+DESIGN.md
+CLAUDE.md
+.agents/skills
