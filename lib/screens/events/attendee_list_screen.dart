@@ -6,6 +6,8 @@ import 'package:after_hours/services/attendance_service.dart';
 import 'package:after_hours/services/user_service.dart';
 import 'package:after_hours/services/friend_service.dart';
 import 'package:after_hours/widgets/user_avatar.dart';
+import 'package:after_hours/widgets/tap_to_profile.dart';
+import 'package:after_hours/widgets/navigation_helper.dart';
 
 class AttendeeListScreen extends StatelessWidget {
   final String eventId;
