@@ -106,7 +106,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _friendRequestsSection(user.uid),
+                            
                                 _avatarCard(displayName, appUser?.photoUrl, appUser?.username ?? ''),
                                 const SizedBox(height: 24),
 
@@ -149,90 +149,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _friendRequestsSection(String currentUid) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FriendService().incomingRequests(currentUid),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) { //data! means im sure data is not null, because we checked it already with hasData
-          return const SizedBox.shrink(); //sizedbox.shrink() just means return nothing
-        }
-
-        final requests = snapshot.data!.docs; //store all requests documents (lists)
-        final fromUids = requests
-            .map((doc) => (doc.data() as Map<String, dynamic>)['from_uid'] as String) //document data is returned as a generic object, this tells Dart to treat it 
-                                                                                      //as a key value map so can access fields by name
-            .toList();
-
-        // Fetch every requester's profile in one batched call instead of
-        // firing a separate Firestore read per row.
-        return FutureBuilder<List<AppUser>>(
-          future: UserService().getUsers(fromUids),
-          builder: (context, usersSnap) {
-            if (!usersSnap.hasData) return const SizedBox.shrink(); //sizedbox.shrink() just means return nothing
-
-            final usersByUid = <String, AppUser>{};
-            for (final u in usersSnap.data!) {
-              usersByUid[u.uid] = u;
-            }
-
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 4),
-                _sectionLabel('Friend requests'),
-                const SizedBox(height: 10),
-                ...requests.map((doc) {
-                  final data = doc.data() as Map<String, dynamic>;
-                  final fromUid = data['from_uid'] as String;
-                  final requester = usersByUid[fromUid];
-                  final username = requester?.name ?? 'Unknown';
-
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: kSurface,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: kBorder),
-                    ),
-                    child: Row(
-                      children: [
-                        UserAvatar(
-                          photoUrl: requester?.photoUrl,
-                          displayName: username,
-                          radius: 20,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            username,
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () async {
-                            await FriendService().rejectRequest(doc.id);
-                          },
-                          child: const Text('Decline', style: TextStyle(color: kMuted)),
-                        ),
-                        TextButton(
-                          onPressed: () async {
-                            await FriendService().acceptRequest(doc.id, fromUid, currentUid);
-                          },
-                          child: const Text('Accept', style: TextStyle(color: kAccent, fontWeight: FontWeight.w700)),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
-                const SizedBox(height: 14),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
 
   Widget _avatarCard(String displayName, String? photoUrl, String username) {
     return Container(
@@ -268,12 +184,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _sectionLabel(String label) {
-    return Text(
-      label.toUpperCase(),
-      style: const TextStyle(color: kDim, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.5),
-    );
-  }
 
   Widget _statsRow(List<_StatItem> items) {
     final row = <Widget>[];
@@ -414,6 +324,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 );
               }).toList(),
             ),
+    );
+  }
+
+      Widget _sectionLabel(String label) {
+    return Text(
+      label.toUpperCase(),
+      style: const TextStyle(color: kDim, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.5),
     );
   }
 }
