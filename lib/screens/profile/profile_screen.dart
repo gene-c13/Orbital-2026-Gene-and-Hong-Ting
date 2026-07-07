@@ -9,8 +9,6 @@ import 'package:after_hours/services/user_service.dart';
 import 'package:after_hours/models/user.dart';
 import 'package:after_hours/widgets/user_avatar.dart';
 import 'package:after_hours/screens/profile/edit_profile_sheet.dart';
-import 'package:after_hours/screens/chat/chat_screen.dart';
-import 'package:after_hours/services/chat_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -265,18 +263,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                         ),
                         TextButton(
-                          onPressed: () async {
-                            await ChatService().getOrCreateChat(currentUid, friend.uid);
-                            if (!context.mounted) return;
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => ChatScreen(
-                                  otherUid: friend.uid,
-                                  otherDisplayName: friend.name,
-                                ),
-                              ),
-                            );
-                          },
+                          onPressed: () => openChat(context, friend.uid, friend.name),
                           child: const Text('Message', style: TextStyle(color: kAccent, fontWeight: FontWeight.w700)),
                         ),
                       ],

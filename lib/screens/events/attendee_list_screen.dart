@@ -1,4 +1,3 @@
-import 'package:after_hours/widgets/tap_to_profile.dart';
 import 'package:flutter/material.dart';
 import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/services/auth_service.dart';
@@ -6,8 +5,6 @@ import 'package:after_hours/models/user.dart';
 import 'package:after_hours/services/attendance_service.dart';
 import 'package:after_hours/services/user_service.dart';
 import 'package:after_hours/services/friend_service.dart';
-import 'package:after_hours/services/chat_service.dart';
-import 'package:after_hours/screens/chat/chat_screen.dart';
 import 'package:after_hours/widgets/user_avatar.dart';
 
 class AttendeeListScreen extends StatelessWidget {
@@ -159,18 +156,7 @@ class _AttendeeTile extends StatelessWidget {
             builder: (context, snap) {
               if (!snap.hasData || !snap.data!) return const SizedBox.shrink();
               return TextButton(
-                onPressed: () async {
-                  await ChatService().getOrCreateChat(currentUid, user.uid);
-                  if (!context.mounted) return;
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => ChatScreen(
-                        otherUid: user.uid,
-                        otherDisplayName: user.name,
-                      ),
-                    ),
-                  );
-                },
+                onPressed: () => openChat(context, user.uid, user.name),
                 child: const Text('Message', style: TextStyle(color: kAccent, fontWeight: FontWeight.w700)),
               );
             },

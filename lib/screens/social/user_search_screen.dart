@@ -5,8 +5,7 @@ import 'package:after_hours/services/user_service.dart';
 import 'package:after_hours/models/user.dart';
 import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/widgets/user_avatar.dart';
-import 'package:after_hours/services/chat_service.dart';
-import 'package:after_hours/screens/chat/chat_screen.dart';
+import 'package:after_hours/widgets/navigation_helper.dart';
 import 'dart:async';
 
 class UserSearchScreen extends StatefulWidget {
@@ -215,21 +214,7 @@ class _UserResultTileState extends State<_UserResultTile> {
 
               if (alreadyFriend) {
                 return TextButton(
-                  onPressed: () async {
-                    await ChatService().getOrCreateChat(
-                      widget.currentUid,
-                      widget.uid,
-                    );
-                    if (!context.mounted) return;
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => ChatScreen(
-                          otherUid: widget.uid,
-                          otherDisplayName: widget.username,
-                        ),
-                      ),
-                    );
-                  },
+                  onPressed: () => openChat(context, widget.uid, widget.username),
                   child: const Text('Message', style: TextStyle(color: kAccent, fontWeight: FontWeight.w700)),
                 );
               }
