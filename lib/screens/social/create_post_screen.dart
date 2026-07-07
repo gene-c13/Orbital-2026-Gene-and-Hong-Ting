@@ -133,8 +133,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     if (picked != null) setState(() => _imageFile = picked);
   }
 
-  Future<void> _submit() async {
-    final caption = _captionController.text.trim();
+  Future<void> _submit() async { //what should happen when user tap post
+    final caption = _captionController.text.trim(); 
     if (caption.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Write something about your night first.')),
