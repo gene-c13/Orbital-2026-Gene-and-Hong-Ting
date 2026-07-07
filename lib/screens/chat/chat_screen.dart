@@ -4,6 +4,7 @@ import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/services/auth_service.dart';
 import 'package:after_hours/services/chat_service.dart';
 import 'package:after_hours/utils/time_format.dart';
+import 'package:after_hours/screens/social/other_user_profile_view.dart';
 
 class ChatScreen extends StatefulWidget {
   final String otherUid;
@@ -91,7 +92,11 @@ class _ChatScreenState extends State<ChatScreen> {
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                     const SizedBox(width: 4),
-                    CircleAvatar(
+                    GestureDetector(
+                      onTap: () {Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => OtherUserProfileView(uid: widget.otherUid))
+                      );},
+                      child: Row(children: [CircleAvatar(
                       radius: 18,
                       backgroundColor: kAccent.withValues(alpha: 0.3),
                       child: Text(
@@ -103,7 +108,9 @@ class _ChatScreenState extends State<ChatScreen> {
                     Text(
                       widget.otherDisplayName,
                       style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700),
-                    ),
+                    ),],)
+                    )
+                    
                   ],
                 ),
               ),

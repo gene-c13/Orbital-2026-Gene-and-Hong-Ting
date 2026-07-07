@@ -10,6 +10,7 @@ const Color kAccent  = Color(0xFFB14EFF);
 const Color kPink    = Color(0xFFFF2D95);
 const Color kMuted   = Color(0xCCFFFFFF);
 const Color kDim     = Color(0x80FFFFFF);
+const Color kTransparentPink = Color(0x26FF2D95);
 
 // ── Typography ────────────────────────────────────────────────────────────────
 const kFontNectarine = 'Nectarine';

@@ -9,6 +9,7 @@ import 'package:after_hours/screens/chat/chat_screen.dart';
 import 'package:after_hours/widgets/user_avatar.dart';
 import 'package:after_hours/widgets/navigation_helper.dart';
 
+
 class ChatListScreen extends StatelessWidget { //stateless because the streambuilder handles its own live updates internally
   const ChatListScreen({super.key}); //identify the widget so it can track it across rebuilds
 
