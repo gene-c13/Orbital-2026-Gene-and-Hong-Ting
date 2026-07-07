@@ -10,6 +10,7 @@ import 'package:after_hours/services/friend_service.dart';
 import 'package:after_hours/screens/events/attendee_list_screen.dart';
 import 'package:after_hours/widgets/navigation_helper.dart';
 import 'package:after_hours/widgets/user_avatar.dart';
+import 'package:after_hours/widgets/tap_to_profile.dart';
 
 class EventDetailScreen extends StatelessWidget {
   final Event event;
@@ -536,7 +537,10 @@ class _AttendeePreviewState extends State<_AttendeePreview> {
                   padding: const EdgeInsets.only(bottom: 10),
                   child: Row(
                     children: [
-                      UserAvatar(photoUrl: user.photoUrl, displayName: user.name, radius: 16),
+                      TapToProfile(
+                        uid: user.uid,
+                        child: UserAvatar(photoUrl: user.photoUrl, displayName: user.name, radius: 16),
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(

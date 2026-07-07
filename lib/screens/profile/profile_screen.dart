@@ -8,6 +8,7 @@ import 'package:after_hours/services/auth_service.dart';
 import 'package:after_hours/services/user_service.dart';
 import 'package:after_hours/models/user.dart';
 import 'package:after_hours/widgets/user_avatar.dart';
+import 'package:after_hours/widgets/tap_to_profile.dart';
 import 'package:after_hours/screens/profile/edit_profile_sheet.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -254,7 +255,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     padding: const EdgeInsets.only(bottom: 10),
                     child: Row(
                       children: [
-                        UserAvatar(photoUrl: friend.photoUrl, displayName: friend.name, radius: 18),
+                        TapToProfile(
+                          uid: friend.uid,
+                          child: UserAvatar(photoUrl: friend.photoUrl, displayName: friend.name, radius: 18),
+                        ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(

@@ -6,6 +6,7 @@ import 'package:after_hours/models/user.dart';
 import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/widgets/user_avatar.dart';
 import 'package:after_hours/widgets/navigation_helper.dart';
+import 'package:after_hours/widgets/tap_to_profile.dart';
 import 'dart:async';
 
 class UserSearchScreen extends StatefulWidget {
@@ -189,10 +190,13 @@ class _UserResultTileState extends State<_UserResultTile> {
       ),
       child: Row(
         children: [
-          UserAvatar(
-            photoUrl: widget.photoUrl,
-            displayName: widget.username,
-            radius: 20,
+          TapToProfile(
+            uid: widget.uid,
+            child: UserAvatar(
+              photoUrl: widget.photoUrl,
+              displayName: widget.username,
+              radius: 20,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
