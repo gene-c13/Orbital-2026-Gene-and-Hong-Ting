@@ -7,9 +7,7 @@ import 'package:after_hours/services/auth_service.dart';
 import 'package:after_hours/services/attendance_service.dart';
 import 'package:after_hours/services/user_service.dart';
 import 'package:after_hours/services/friend_service.dart';
-import 'package:after_hours/services/chat_service.dart';
 import 'package:after_hours/screens/events/attendee_list_screen.dart';
-import 'package:after_hours/screens/chat/chat_screen.dart';
 import 'package:after_hours/widgets/navigation_helper.dart';
 import 'package:after_hours/widgets/user_avatar.dart';
 
