@@ -255,15 +255,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     padding: const EdgeInsets.only(bottom: 10),
                     child: Row(
                       children: [
-                        TapToProfile(
-                          uid: friend.uid,
-                          child: UserAvatar(photoUrl: friend.photoUrl, displayName: friend.name, radius: 18),
-                        ),
-                        const SizedBox(width: 12),
                         Expanded(
-                          child: Text(
-                            friend.name,
-                            style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                          child: TapToProfile(
+                            uid: friend.uid,
+                            child: Row(
+                              children: [
+                                UserAvatar(photoUrl: friend.photoUrl, displayName: friend.name, radius: 18),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    friend.name,
+                                    style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                         TextButton(

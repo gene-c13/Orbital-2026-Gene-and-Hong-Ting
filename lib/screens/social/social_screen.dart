@@ -227,24 +227,30 @@ class _PostCardState extends State<_PostCard> {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             child: Row(
               children: [
-                TapToProfile(
-                  uid: data['uid'] as String? ?? '',
-                  child: UserAvatar(
-                    displayName: displayName,
-                    photoUrl: data['photo_url'] as String?,
-                    radius: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(displayName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
-                      if (username.isNotEmpty)
-                        Text('@$username', style: const TextStyle(color: kMuted, fontSize: 12, fontWeight: FontWeight.w500)),
-                      Text(timeAgo(ts), style: const TextStyle(color: kDim, fontSize: 11)),
-                    ],
+                  child: TapToProfile(
+                    uid: data['uid'] as String? ?? '',
+                    child: Row(
+                      children: [
+                        UserAvatar(
+                          displayName: displayName,
+                          photoUrl: data['photo_url'] as String?,
+                          radius: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(displayName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
+                              if (username.isNotEmpty)
+                                Text('@$username', style: const TextStyle(color: kMuted, fontSize: 12, fontWeight: FontWeight.w500)),
+                              Text(timeAgo(ts), style: const TextStyle(color: kDim, fontSize: 11)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 if (puked) _pukeBadge(),
