@@ -549,18 +549,7 @@ class _AttendeePreviewState extends State<_AttendeePreview> {
                       ),
                       if (user.uid != widget.currentUid && data.friends.contains(user.uid))
                         TextButton(
-                          onPressed: () async {
-                            await ChatService().getOrCreateChat(widget.currentUid!, user.uid);
-                            if (!context.mounted) return;
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => ChatScreen(
-                                  otherUid: user.uid,
-                                  otherDisplayName: user.name,
-                                ),
-                              ),
-                            );
-                          },
+                          onPressed: () => openChat(context, user.uid, user.username),
                           child: const Text('Message', style: TextStyle(color: kAccent, fontSize: 13, fontWeight: FontWeight.w700)),
                         ),
                     ],

@@ -122,14 +122,7 @@ class ChatListScreen extends StatelessWidget { //stateless because the streambui
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                              onTap: () => Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => ChatScreen(
-                                    otherUid:         otherUid,
-                                    otherDisplayName: other.name,
-                                  ),
-                                ),
-                              ),
+                              onTap: () => openChat(context, other.uid, other.username),
                             )
                           );  
                           },

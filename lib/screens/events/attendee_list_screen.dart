@@ -1,3 +1,4 @@
+import 'package:after_hours/widgets/navigation_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/services/auth_service.dart';
@@ -149,18 +150,7 @@ class _AttendeeTile extends StatelessWidget {
             builder: (context, snap) {
               if (!snap.hasData || !snap.data!) return const SizedBox.shrink();
               return TextButton(
-                onPressed: () async {
-                  await ChatService().getOrCreateChat(currentUid, user.uid);
-                  if (!context.mounted) return;
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => ChatScreen(
-                        otherUid: user.uid,
-                        otherDisplayName: user.name,
-                      ),
-                    ),
-                  );
-                },
+                onPressed: () => openChat(context, user.uid, user.name),
                 child: const Text('Message', style: TextStyle(color: kAccent, fontWeight: FontWeight.w700)),
               );
             },

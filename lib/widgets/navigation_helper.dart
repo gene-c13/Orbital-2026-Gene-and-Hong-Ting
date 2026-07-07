@@ -6,6 +6,9 @@ import 'package:after_hours/screens/events/events_screen.dart';
 import 'package:after_hours/screens/social/social_screen.dart';
 import 'package:after_hours/screens/profile/profile_screen.dart';
 import 'package:after_hours/screens/auth/login_screen.dart';
+import 'package:after_hours/screens/chat/chat_screen.dart';
+import 'package:after_hours/services/chat_service.dart';
+import 'package:after_hours/services/auth_service.dart';
 
 void goToTab(BuildContext context, int targetIndex) {
 
@@ -64,4 +67,14 @@ class _AuthGuardState extends State<_AuthGuard> {
 
   @override
   Widget build(BuildContext context) => widget.child;
+}
+
+Future<void> openChat(BuildContext context, String otherUid, String otherName) async {
+  await ChatService().getOrCreateChat(AuthService().currentUid ?? '', otherUid);
+  if (!context.mounted) return;
+  Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (_) => ChatScreen(otherUid: otherUid, otherDisplayName: otherName),
+    ),
+  );
 }

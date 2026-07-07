@@ -265,18 +265,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                         ),
                         TextButton(
-                          onPressed: () async {
-                            await ChatService().getOrCreateChat(currentUid, friend.uid);
-                            if (!context.mounted) return;
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => ChatScreen(
-                                  otherUid: friend.uid,
-                                  otherDisplayName: friend.name,
-                                ),
-                              ),
-                            );
-                          },
+                          onPressed: () => openChat(context, friend.uid, friend.name),
                           child: const Text('Message', style: TextStyle(color: kAccent, fontWeight: FontWeight.w700)),
                         ),
                       ],
