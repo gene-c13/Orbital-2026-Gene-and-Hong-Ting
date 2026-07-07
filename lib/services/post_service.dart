@@ -7,62 +7,96 @@ class PostService {
   final _db = FirebaseFirestore.instance;
 
   Stream<List<QueryDocumentSnapshot>> feedStream(String uid) {
-    final publicStream = _db
-        .collection('posts')
-        .where('is_public', isEqualTo: true)
-        .orderBy('created_at', descending: true)
-        .limit(50)
-        .snapshots();
+  final publicStream = _db
+      .collection('posts')
+      .where('is_public', isEqualTo: true)
+      .orderBy('created_at', descending: true)
+      .limit(50)
+      .snapshots();
 
-    final ownStream = _db
-        .collection('posts')
-        .where('uid', isEqualTo: uid)
-        .orderBy('created_at', descending: true)
-        .limit(50)
-        .snapshots();
+  final ownStream = _db
+      .collection('posts')
+      .where('uid', isEqualTo: uid)
+      .orderBy('created_at', descending: true)
+      .limit(50)
+      .snapshots();
 
-    QuerySnapshot? latestPublic;
-    QuerySnapshot? latestOwn;
+  final friendsListStream = _db
+      .collection('users')
+      .doc(uid)
+      .collection('friends')
+      .snapshots();
 
-    List<QueryDocumentSnapshot> merge() {
-      final publicDocs = latestPublic?.docs ?? [];
-      final ownDocs    = latestOwn?.docs   ?? [];
+  QuerySnapshot? latestPublic;
+  QuerySnapshot? latestOwn;
+  List<QueryDocumentSnapshot> latestFriendPosts = [];
 
-      final seen = <String>{};
-      final merged = <QueryDocumentSnapshot>[];
-      for (final doc in [...publicDocs, ...ownDocs]) {
-        if (seen.add(doc.id)) merged.add(doc);
-      }
-      merged.sort((a, b) {
-        final at = (a.data() as Map<String, dynamic>)['created_at'] as Timestamp?;
-        final bt = (b.data() as Map<String, dynamic>)['created_at'] as Timestamp?;
-        if (at == null && bt == null) return 0;
-        if (at == null) return 1;
-        if (bt == null) return -1;
-        return bt.compareTo(at);
-      });
-      return merged;
+  List<QueryDocumentSnapshot> merge() {
+    final publicDocs = latestPublic?.docs ?? [];
+    final ownDocs    = latestOwn?.docs    ?? [];
+
+    final seen = <String>{};
+    final merged = <QueryDocumentSnapshot>[];
+    for (final doc in [...publicDocs, ...ownDocs, ...latestFriendPosts]) {
+      if (seen.add(doc.id)) merged.add(doc);
+    }
+    merged.sort((a, b) {
+      final at = (a.data() as Map<String, dynamic>)['created_at'] as Timestamp?;
+      final bt = (b.data() as Map<String, dynamic>)['created_at'] as Timestamp?;
+      if (at == null && bt == null) return 0;
+      if (at == null) return 1;
+      if (bt == null) return -1;
+      return bt.compareTo(at);
+    });
+    return merged;
+  }
+
+  final controller = StreamController<List<QueryDocumentSnapshot>>.broadcast();
+
+  final publicSub = publicStream.listen(
+    (snap) { latestPublic = snap; controller.add(merge()); },
+    onError: controller.addError,
+  );
+  final ownSub = ownStream.listen(
+    (snap) { latestOwn = snap; controller.add(merge()); },
+    onError: controller.addError,
+  );
+
+  // whenever the friends list changes, drop the old friends'-posts listener
+  // and start a fresh one scoped to the current friend uids
+  StreamSubscription? friendPostsSub;
+  final friendsListSub = friendsListStream.listen((friendsSnap) {
+    friendPostsSub?.cancel();
+
+    final friendUids = friendsSnap.docs.map((d) => d.id).take(30).toList();
+    if (friendUids.isEmpty) {
+      latestFriendPosts = [];
+      controller.add(merge());
+      return;
     }
 
-    final controller = StreamController<List<QueryDocumentSnapshot>>.broadcast();
+    friendPostsSub = _db
+        .collection('posts')
+        .where('uid', whereIn: friendUids)
+        .orderBy('created_at', descending: true)
+        .limit(50)
+        .snapshots()
+        .listen(
+          (snap) { latestFriendPosts = snap.docs; controller.add(merge()); },
+          onError: controller.addError,
+        );
+  });
 
-    final publicSub = publicStream.listen(
-      (snap) { latestPublic = snap; controller.add(merge()); },
-      onError: controller.addError,
-    );
-    final ownSub = ownStream.listen(
-      (snap) { latestOwn = snap; controller.add(merge()); },
-      onError: controller.addError,
-    );
+  controller.onCancel = () {
+    publicSub.cancel();
+    ownSub.cancel();
+    friendsListSub.cancel();
+    friendPostsSub?.cancel();
+    controller.close();
+  };
 
-    controller.onCancel = () {
-      publicSub.cancel();
-      ownSub.cancel();
-      controller.close();
-    };
-
-    return controller.stream;
-  }
+  return controller.stream;
+}
 
   Stream<QuerySnapshot> commentsStream(String postId) {
     return _db
