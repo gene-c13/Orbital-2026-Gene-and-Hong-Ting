@@ -70,6 +70,7 @@ class UserService {
     required String favouriteVenue,
     required String favouriteGenre,
     required bool isPublic,
+    required String bio,
     Uint8List? avatarBytes,
   }) async {
     // upload avatar first — it's the most likely step to fail, and doing it
@@ -86,6 +87,7 @@ class UserService {
       'favourite_venue': favouriteVenue,
       'favourite_genre': favouriteGenre,
       'is_public':       isPublic,
+      'bio':             bio,
     };
     if (photoUrl != null) data['photo_url'] = photoUrl;
 

@@ -14,6 +14,7 @@ class EditProfileSheet extends StatefulWidget {
   final String  username;
   final String  initialVenue;
   final String? initialGenre;
+  final String  initialBio;
   final bool initialIsPublic;
   final String? initialPhotoUrl;
   final String  uid;
@@ -29,6 +30,7 @@ class EditProfileSheet extends StatefulWidget {
     required this.initialPhotoUrl,
     required this.uid,
     required this.onSaved,
+    required this.initialBio,
   });
 
   @override
@@ -38,6 +40,7 @@ class EditProfileSheet extends StatefulWidget {
 class _EditProfileSheetState extends State<EditProfileSheet> {
   late final TextEditingController _nameController;
   late final TextEditingController _venueController;
+  late final TextEditingController _bioController;
 
   String?    _selectedGenre;
   Uint8List? _pickedBytes;
@@ -49,6 +52,7 @@ class _EditProfileSheetState extends State<EditProfileSheet> {
     super.initState();
     _nameController  = TextEditingController(text: widget.initialName);
     _venueController = TextEditingController(text: widget.initialVenue);
+    _bioController = TextEditingController(text: widget.initialBio);
     _selectedGenre   = widget.initialGenre;
     _isPublic = widget.initialIsPublic;
   }
@@ -57,6 +61,7 @@ class _EditProfileSheetState extends State<EditProfileSheet> {
   void dispose() {
     _nameController.dispose();
     _venueController.dispose();
+    _bioController.dispose();
     super.dispose();
   }
 
@@ -99,6 +104,7 @@ Future<void> _save() async {
       favouriteGenre: _selectedGenre ?? '',
       isPublic:       _isPublic,
       avatarBytes:    _pickedBytes,
+      bio:            _bioController.text.trim(),
     );
 
     if (!mounted) return;
@@ -245,6 +251,15 @@ Future<void> _save() async {
                     ),
                     const SizedBox(height: 22),
 
+                    _fieldLabel('BIO'),
+                    const SizedBox(height: 8),
+                    AppTextField(
+                      controller: _bioController,
+                      hint:       'e.g. Party Animal',
+                      icon:       Icons.notes_outlined,
+                    ),
+                    const SizedBox(height: 22),
+
                     _fieldLabel('FAVOURITE GENRE'),
                     const SizedBox(height: 8),
                     GestureDetector(
@@ -328,7 +343,7 @@ Future<void> _save() async {
                     const SizedBox(height: 8),
                     AppTextField(
                       controller: _venueController,
-                      hint:       'e.g. Fabric, Printworks...',
+                      hint:       'e.g. Zouk...',
                       icon:       Icons.location_on_outlined,
                       action:     TextInputAction.done,
                     ),

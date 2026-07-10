@@ -5,6 +5,7 @@ class AppUser {
   final String photoUrl;
   final String favouriteVenue;
   final String favouriteGenre;
+  final String bio;
   final List<String> clubsVisited;
   final num hoursThisMonth;
   final int eventsThisMonth;
@@ -25,6 +26,7 @@ class AppUser {
     this.totalEvents = 0,
     this.pukeCount = 0,
     this.isPublic = true,
+    this.bio = '',
   });
 
   /// Display name to show, falling back to [username].
@@ -51,6 +53,7 @@ class AppUser {
       totalEvents: data['total_events'] ?? 0,
       pukeCount: data['puke_count'] ?? 0,
       isPublic: data['is_public'] as bool? ?? true,
+      bio: data['bio'] ?? '',
     );
   }
 }

@@ -6,7 +6,7 @@ import 'package:after_hours/services/friend_service.dart';
 import 'package:after_hours/models/user.dart';
 import 'package:after_hours/widgets/user_avatar.dart';
 import 'package:after_hours/widgets/navigation_helper.dart';
-
+import 'package:after_hours/widgets/primary_button.dart';
 
 // Read-only profile view for someone who ISN'T the signed-in user.
 // Opened from things like the comments sheet, where you tap another
@@ -26,7 +26,6 @@ class _OtherUserProfileViewState extends State<OtherUserProfileView> {
   @override
   Widget build(BuildContext context) {
     final currentUid = AuthService().currentUid ?? '';
-    final isOwnProfile = currentUid == widget.uid;
 
     return Scaffold(
       body: Container(
@@ -69,17 +68,27 @@ class _OtherUserProfileViewState extends State<OtherUserProfileView> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _avatarCard(appUser),
+                          _bioHeader(context, currentUid, appUser, appUser.displayName),
                           const SizedBox(height: 16),
-                          if (!isOwnProfile) _actionRow(currentUid, appUser),
-                          if (!isOwnProfile) const SizedBox(height: 24),
-                          _sectionLabel('All time'),
-                          const SizedBox(height: 10),
-                          _statsRow(appUser),
-                          const SizedBox(height: 24),
-                          _sectionLabel('Clubs visited'),
-                          const SizedBox(height: 10),
-                          _clubsCard(appUser.clubsVisited),
+                          if (appUser.clubsVisited.isNotEmpty)
+                            _iconRow(Icons.location_on_outlined, 'Previously at: ${appUser.clubsVisited.join(', ')}'),
+
+                          if (appUser.favouriteGenre.isNotEmpty)
+                            _iconRow(Icons.music_note_outlined, 'Obsessed with: ${appUser.favouriteGenre}'),
+
+                          if (appUser.favouriteVenue.isNotEmpty)
+                            _iconRow(Icons.favorite_border, 'Home club: ${appUser.favouriteVenue}'),
+
+                          
+                          _iconRow(Icons.local_bar_outlined,
+                                'Out ${appUser.hoursThisMonth.toStringAsFixed(1)}h across ${appUser.eventsThisMonth} nights this month'),
+
+                        
+                          _iconRow(Icons.confirmation_number_outlined, '${appUser.totalEvents} events all-time'),
+
+                        
+                          _iconRow(Icons.sick_outlined, '${appUser.pukeCount} 🤮 lifetime'),
+
                         ],
                       ),
                     );
@@ -93,211 +102,134 @@ class _OtherUserProfileViewState extends State<OtherUserProfileView> {
     );
   }
 
-  Widget _avatarCard(AppUser appUser) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: kSurface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: kBorder),
+
+
+  Widget _bioHeader(BuildContext context, String currentUid, AppUser? appUser, String displayName) {
+  return Column(
+    children: [
+      UserAvatar(
+        photoUrl: appUser?.photoUrl,
+        displayName: displayName,
+        radius: 120,        // big centered circle
+        fontSize: 34,
       ),
-      child: Row(
+      const SizedBox(height: 16),
+      
+      FutureBuilder<List<bool>>(
+        future: Future.wait([
+          _friendService.isFriend(currentUid, appUser!.uid),
+          _friendService.hasPendingRequest(currentUid, appUser.uid),
+        ]),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) return const SizedBox(height: 44);   // hold the space while loading
+
+          final alreadyFriend = snapshot.data![0];
+          final pending       = snapshot.data![1] || _requestSent;
+          final canMessage    = alreadyFriend || appUser.isPublic;
+
+          final followLabel = alreadyFriend ? 'Following'
+                            : pending       ? 'Requested'
+                            : '+ Add Friend';
+
+          VoidCallback? followAction;
+                if (alreadyFriend) {
+                  followAction = () => _confirmUnfriend(appUser!);   // the dialog, extracted
+                } else if (pending) {
+                  followAction = null;                                // Requested → disabled
+                } else {
+                  followAction = () async {
+                    await _friendService.sendFriendRequest(currentUid, appUser!.uid);
+                    if (mounted) setState(() => _requestSent = true);
+                  };
+                }
+      
+      return Row(
         children: [
-          UserAvatar(photoUrl: appUser.photoUrl, displayName: appUser.name, radius: 30, fontSize: 26),
-          const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(appUser.name,
-                  style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 3),
-              Text('@${appUser.username}',
-                  style: const TextStyle(color: kMuted, fontSize: 13, fontWeight: FontWeight.w600)),
-            ],
+          Expanded(
+            child: PrimaryButton(
+              label: followLabel,
+              height: 44,
+              onPressed: followAction
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: PrimaryButton(
+              label: 'Message',
+              height: 44,
+              onPressed: canMessage ? () => openChat(context, appUser.uid, appUser.name) : null,
+            ),
           ),
         ],
+      );
+        },
       ),
-    );
-  }
-
-  // Add / Sent / Message button, same rules as the user search screen:
-  // no relationship yet -> Add, request pending -> Sent, already friends -> Message.
-  Widget _actionRow(String currentUid, AppUser appUser) {
-    return FutureBuilder<List<bool>>(
-      future: Future.wait([
-        _friendService.isFriend(currentUid, appUser.uid),
-        _friendService.hasPendingRequest(currentUid, appUser.uid),
-      ]),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) return const SizedBox.shrink();
-
-        final alreadyFriend = snapshot.data![0];
-        final pending = snapshot.data![1] || _requestSent;
-
-        if (alreadyFriend) {
-          return Column(
-            children: [
-              _fullWidthButton('Message', ()  => openChat(context, appUser.uid, appUser.name)),
-              const SizedBox(height: 10),
-              TextButton(
-                onPressed: () async {
-                  final confirmed = await showDialog<bool>(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      backgroundColor: kSheet,
-                      title: const Text('Unfriend?', style: TextStyle(color: Colors.white)),
-                      content: Text(
-                        'You and ${appUser.name} will no longer be friends.',
-                        style: const TextStyle(color: kDim),
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(ctx).pop(false),
-                          child: const Text('Cancel'),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.of(ctx).pop(true),
-                          child: const Text('Unfriend', style: TextStyle(color: Colors.redAccent)),
-                        ),
-                      ],
-                    ),
-                  );
-                  if (confirmed == true) {
-                    await _friendService.unfriend(currentUid, appUser.uid);
-                    if (mounted) setState(() {});
-                  }
-                },
-                child: const Text('Unfriend', style: TextStyle(color: Colors.redAccent)),
-              ),
+      const SizedBox(height: 20),
+      SizedBox(
+        width: double.infinity,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(displayName,
+                style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w600)),
+            if ((appUser?.bio ?? '').isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(appUser!.bio, style: const TextStyle(color: kMuted, fontSize: 14, height: 1.4)),
             ],
-          );
-        }
-
-        if (pending) {
-          return const Text('Friend request sent', style: TextStyle(color: kMuted, fontWeight: FontWeight.w600));
-        }
-
-        return _fullWidthButton('Add friend', () async {
-          try {
-            await _friendService.sendFriendRequest(currentUid, appUser.uid);
-            if (mounted) setState(() => _requestSent = true);
-          } catch (e) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Couldn\'t send request: $e')),
-              );
-            }
-          }
-        });
-      },
-    );
-  }
-
-  Widget _fullWidthButton(String label, VoidCallback onPressed) {
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: kAccent),
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ],
         ),
-        child: Text(label, style: const TextStyle(color: kAccent, fontWeight: FontWeight.w700)),
       ),
-    );
-  }
-
-  Widget _sectionLabel(String label) {
-    return Text(
-      label.toUpperCase(),
-      style: const TextStyle(color: kDim, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.5),
-    );
-  }
-
-  Widget _statsRow(AppUser appUser) {
-    final items = [
-      _StatItem(label: 'Events', value: '${appUser.totalEvents}', icon: Icons.confirmation_number),
-      _StatItem(
-        label: 'Fave venue',
-        value: appUser.favouriteVenue.isEmpty ? '—' : appUser.favouriteVenue,
-        icon: Icons.location_on,
-      ),
-      _StatItem(
-        label: 'Fave genre',
-        value: appUser.favouriteGenre.isEmpty ? '—' : appUser.favouriteGenre,
-        icon: Icons.music_note,
-      ),
-    ];
-
-    return Row(
-      children: [
-        for (var i = 0; i < items.length; i++)
-          Expanded(
-            child: Container(
-              margin: EdgeInsets.only(right: i < items.length - 1 ? 10 : 0),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-              decoration: BoxDecoration(
-                color: kSurface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: kBorder),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(items[i].icon, color: kAccent, size: 16),
-                  const SizedBox(height: 8),
-                  Text(items[i].value, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 2),
-                  Text(items[i].label, style: const TextStyle(color: kDim, fontSize: 10, letterSpacing: 0.2)),
-                ],
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _clubsCard(List<String> clubs) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: kSurface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: kBorder),
-      ),
-      child: clubs.isEmpty
-          ? const Text('No clubs logged yet.', style: TextStyle(color: kDim, fontSize: 13))
-          : Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: clubs.map((club) {
-                return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                  decoration: BoxDecoration(
-                    color: const Color(0x22B14EFF),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: kBorder),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.nightlife, color: kAccent, size: 13),
-                      const SizedBox(width: 6),
-                      Text(club, style: const TextStyle(color: Colors.white, fontSize: 12)),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
-    );
-  }
+    ],
+  );
 }
 
-class _StatItem {
-  final String label;
-  final String value;
-  final IconData icon;
-  const _StatItem({required this.label, required this.value, required this.icon});
+    Widget _iconRow(IconData icon, String text) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: kDim, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                text,
+                style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.4),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    Future<void> _confirmUnfriend(AppUser appUser) async {
+      final currentUid = AuthService().currentUid ?? '';
+
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: kSheet,
+          title: const Text('Unfriend?', style: TextStyle(color: Colors.white)),
+          content: Text(
+            'You and ${appUser.name} will no longer be friends.',
+            style: const TextStyle(color: kDim),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Unfriend', style: TextStyle(color: Colors.redAccent)),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed == true) {
+        await _friendService.unfriend(currentUid, appUser.uid);
+        if (mounted) setState(() {});
+      }
+    }
 }
