@@ -10,6 +10,7 @@ import 'package:after_hours/models/user.dart';
 import 'package:after_hours/widgets/user_avatar.dart';
 import 'package:after_hours/widgets/tap_to_profile.dart';
 import 'package:after_hours/screens/profile/edit_profile_sheet.dart';
+import 'package:after_hours/widgets/primary_button.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -28,6 +29,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final venue    = appUser?.favouriteVenue ?? '';
     final photoUrl = appUser?.photoUrl ?? '';
 
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -41,6 +43,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         initialIsPublic: appUser?.isPublic ?? true,
         uid:             user.uid,
         onSaved:         () {},
+        initialBio:      appUser?.bio ?? '',
       ),
     );
   }
@@ -74,13 +77,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Text('PROFILE', style: kNectarine(size: 28, letterSpacing: 4)),
                         const Spacer(),
                         GestureDetector(
-                          onTap: () => _openEditPopup(appUser),
-                          child: const Padding(
-                            padding: EdgeInsets.all(8),
-                            child: Icon(Icons.edit_outlined, color: kDim, size: 20),
-                          ),
-                        ),
-                        GestureDetector(
                           onTap: () async {
                             await AuthService().signOut();
                             if (!context.mounted) return;
@@ -106,35 +102,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                             
-                                _avatarCard(displayName, appUser?.photoUrl, appUser?.username ?? ''),
+                                _bioHeader(appUser, displayName),
                                 const SizedBox(height: 24),
 
-                                _sectionLabel('This month'),
-                                const SizedBox(height: 10),
-                                _statsRow([
-                                  _StatItem(label: 'Hours out',  value: '${(appUser?.hoursThisMonth ?? 0).toStringAsFixed(1)}h', icon: Icons.nightlife),
-                                  _StatItem(label: 'Events',     value: '${appUser?.eventsThisMonth ?? 0}',                     icon: Icons.calendar_today),
-                                  _StatItem(label: 'Puke count', value: '${appUser?.pukeCount ?? 0} 🤮',                        icon: Icons.sick),
-                                ]),
-                                const SizedBox(height: 24),
+                                const SizedBox(height: 20),
 
-                                _sectionLabel('All time'),
-                                const SizedBox(height: 10),
-                                _statsRow([
-                                  _StatItem(label: 'Events',     value: '${appUser?.totalEvents ?? 0}',                                         icon: Icons.confirmation_number),
-                                  _StatItem(label: 'Fave venue', value: (appUser?.favouriteVenue.isEmpty ?? true) ? '—' : appUser!.favouriteVenue, icon: Icons.location_on),
-                                  _StatItem(label: 'Fave genre', value: (appUser?.favouriteGenre.isEmpty ?? true) ? '—' : appUser!.favouriteGenre, icon: Icons.music_note),
-                                ]),
-                                const SizedBox(height: 24),
+                                if (appUser != null && appUser.clubsVisited.isNotEmpty)
+                                  _iconRow(Icons.location_on_outlined, 'Previously at: ${appUser.clubsVisited.join(', ')}'),
+
+                                if (appUser != null && appUser.favouriteGenre.isNotEmpty)
+                                  _iconRow(Icons.music_note_outlined, 'Obsessed with: ${appUser.favouriteGenre}'),
+
+                                if (appUser != null && appUser.favouriteVenue.isNotEmpty)
+                                  _iconRow(Icons.favorite_border, 'Home club: ${appUser.favouriteVenue}'),
+
+                                if (appUser != null)
+                                  _iconRow(Icons.local_bar_outlined,
+                                      'Out ${appUser.hoursThisMonth.toStringAsFixed(1)}h across ${appUser.eventsThisMonth} nights this month'),
+
+                                if (appUser != null)
+                                  _iconRow(Icons.confirmation_number_outlined, '${appUser.totalEvents} events all-time'),
+
+                                if (appUser != null)
+                                  _iconRow(Icons.sick_outlined, '${appUser.pukeCount} 🤮 lifetime'),
+
+                                
 
                                 _sectionLabel('Friends'),
                                 const SizedBox(height: 10),
                                 _friendsCard(user.uid),
                                 const SizedBox(height: 24),
-
-                                _sectionLabel('Clubs visited'),
-                                const SizedBox(height: 10),
-                                _clubsCard(appUser?.clubsVisited ?? []),
                               ],
                             ),
                           ),
@@ -148,71 +145,66 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-
-  Widget _avatarCard(String displayName, String? photoUrl, String username) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: kSurface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: kBorder),
+  Widget _bioHeader(AppUser? appUser, String displayName) {
+  return Column(
+    children: [
+      UserAvatar(
+        photoUrl: appUser?.photoUrl,
+        displayName: displayName,
+        radius: 120,        // big centered circle
+        fontSize: 34,
       ),
-      child: Row(
+      const SizedBox(height: 16),
+      Row(
         children: [
-          UserAvatar(
-            photoUrl: photoUrl,
-            displayName: displayName,
-            radius: 30,
-            fontSize: 26,
+          Expanded(
+            child: PrimaryButton(
+              label: 'Edit profile',
+              height: 44,
+              onPressed: () => _openEditPopup(appUser),
+            ),
           ),
-          const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(displayName,
-                  style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 3),
-              Text(
-                username.isNotEmpty ? '@$username' : '',
-                style: const TextStyle(color: kMuted, fontSize: 13, fontWeight: FontWeight.w600),
+          const SizedBox(width: 10),
+          Expanded(
+            child: SizedBox(
+              height: 44,
+              child: OutlinedButton(
+                onPressed: () {},   // Friends — we wire this later
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: kBorder),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                child: const Text('Friends',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
               ),
-            ],
+            ),
           ),
         ],
       ),
-    );
-  }
-
-
-  Widget _statsRow(List<_StatItem> items) {
-    final row = <Widget>[];
-    for (var i = 0; i < items.length; i++) {
-      final item = items[i];
-      row.add(Expanded(
-        child: Container(
-          margin: EdgeInsets.only(right: i < items.length - 1 ? 10 : 0),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-          decoration: BoxDecoration(
-            color: kSurface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: kBorder),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(item.icon, color: kAccent, size: 16),
-              const SizedBox(height: 8),
-              Text(item.value,
-                  style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 2),
-              Text(item.label, style: const TextStyle(color: kDim, fontSize: 10, letterSpacing: 0.2)),
+      const SizedBox(height: 20),
+      SizedBox(
+        width: double.infinity,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              displayName,
+              style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w600),
+            ),
+            if ((appUser?.bio ?? '').isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                appUser!.bio,
+                style: const TextStyle(color: kMuted, fontSize: 14, height: 1.4),
+              ),
             ],
-          ),
+          ],
         ),
-      ));
-    }
-    return Row(children: row);
-  }
+      ),
+      ],
+  );
+}
+
 
   Widget _friendsCard(String currentUid) {
     return StreamBuilder<QuerySnapshot>(
@@ -288,57 +280,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _clubsCard(List<String> clubs) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: kSurface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: kBorder),
-      ),
-      child: clubs.isEmpty
-          ? const Text('No clubs logged yet.', style: TextStyle(color: kDim, fontSize: 13))
-          : Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: clubs.map((club) {
-                return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                  decoration: BoxDecoration(
-                    color: const Color(0x22B14EFF),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: kBorder),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.nightlife, color: kAccent, size: 13),
-                      const SizedBox(width: 6),
-                      Text(club, style: const TextStyle(color: Colors.white, fontSize: 12)),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
-    );
-  }
+  
 
-      Widget _sectionLabel(String label) {
-    return Text(
-      label.toUpperCase(),
-      style: const TextStyle(color: kDim, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.5),
-    );
-  }
+    Widget _sectionLabel(String label) {
+      return Text(
+        label.toUpperCase(),
+        style: const TextStyle(color: kDim, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.5),
+      );
+    }
+
+    Widget _iconRow(IconData icon, String text) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: kDim, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                text,
+                style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.4),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+
 }
 
 // ── Supporting types ──────────────────────────────────────────────────────────
 
-class _StatItem {
-  final String label;
-  final String value;
-  final IconData icon;
-  const _StatItem({required this.label, required this.value, required this.icon});
-}
 
 
