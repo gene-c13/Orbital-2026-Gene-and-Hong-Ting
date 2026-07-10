@@ -31,10 +31,11 @@ class Event {
     this.imageUrl = '',
   });
 
+  //Create an Event object using the results of Firestore (which are always dictionaries)
   factory Event.fromFirestore(Map<String, dynamic> data, String documentId) {
     return Event(
       id:           documentId,
-      name:         data['name']         ?? 'Unknown Event',
+      name:         data['name']         ?? 'Unknown Event', //construct Event where name is data[name], if null:Unknown Event
       venue:        data['venue']        ?? 'Unknown Venue',
       dj:           data['dj']           ?? 'Unknown DJ',
       time:         data['time']         ?? 'TBC',

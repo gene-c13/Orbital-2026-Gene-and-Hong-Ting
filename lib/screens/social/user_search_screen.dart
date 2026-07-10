@@ -190,19 +190,25 @@ class _UserResultTileState extends State<_UserResultTile> {
       ),
       child: Row(
         children: [
-          TapToProfile(
-            uid: widget.uid,
-            child: UserAvatar(
-              photoUrl: widget.photoUrl,
-              displayName: widget.username,
-              radius: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              widget.username,
-              style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700),
+            child: TapToProfile(
+              uid: widget.uid,
+              child: Row(
+                children: [
+                  UserAvatar(
+                    photoUrl: widget.photoUrl,
+                    displayName: widget.username,
+                    radius: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      widget.username,
+                      style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           FutureBuilder<List<bool>>(

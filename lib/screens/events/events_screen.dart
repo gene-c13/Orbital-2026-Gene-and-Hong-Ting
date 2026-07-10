@@ -21,19 +21,20 @@ class _EventsScreenState extends State<EventsScreen> {
   DateTime selectedDate = DateTime.now();
   final EventService _eventService = EventService();
 
+  //the different states this screen needs to remember
   bool _searching = false;
-  String _query = '';
+  String _query = ''; //what has user typed so far
   final _searchController = TextEditingController();
 
   // stream stored as a field so it's only created when the date actually changes,
-  // not on every rebuild (every keystroke, every setState)
-  late Stream<List<Event>> _dayStream;
+  // if its in build(), it will create new stream every rebuild (every keystroke, every setState)
+  late Stream<List<Event>> _dayStream; //late cos not assigned yet, depenendent on EVentService instant initialised
 
   // search results stream, made once here for the same reason
   late Stream<List<Event>> _searchStream;
 
   @override
-  void initState() {
+  void initState() { //initState is for late variables, when u need to set something up before screen shows up
     super.initState();
     _dayStream = _eventService.getEventsByDateStream(_dateKey);
     _searchStream = _eventService.getAllEventsStream();
@@ -55,9 +56,9 @@ class _EventsScreenState extends State<EventsScreen> {
     });
   }
 
-  String get _dateKey => DateFormat('yyyy-MM-dd').format(selectedDate);
-
-  Future<void> _pickDate() async {
+  String get _dateKey => DateFormat('yyyy-MM-dd').format(selectedDate); //turns selected date into a format that fireStore date field uses
+ 
+  Future<void> _pickDate() async { 
     final picked = await showDatePicker(
       context: context,
       initialDate: selectedDate,
@@ -77,8 +78,8 @@ class _EventsScreenState extends State<EventsScreen> {
     });
     }
   }
-
-  void _changeDay(int days) {
+ 
+  void _changeDay(int days) { 
     setState(() {
       selectedDate = selectedDate.add(Duration(days: days));
       _dayStream = _eventService.getEventsByDateStream(_dateKey); // recreate stream for new date
@@ -86,7 +87,7 @@ class _EventsScreenState extends State<EventsScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) { //runs on every setState()
     return Scaffold(
       bottomNavigationBar: buildNavBar(0, (i) { if (i != 0) goToTab(context, i); }),
       body: Container(
@@ -100,7 +101,7 @@ class _EventsScreenState extends State<EventsScreen> {
               _buildHeader(),
               const Divider(height: 1, thickness: 1, color: kBorder),
               Expanded(
-                child: _searching
+                child: _searching //if _searching is true, show search results, else show date stream
                     ? _buildSearchResults()
                     : StreamBuilder<List<Event>>(
                         stream: _dayStream,

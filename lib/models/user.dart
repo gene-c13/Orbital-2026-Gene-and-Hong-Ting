@@ -1,3 +1,5 @@
+// this model defines profile data and instruct how to convert Firestore doc 
+//into a usable AppUser object (just like in Events.dart)
 class AppUser {
   final String uid;
   final String username;
@@ -19,7 +21,7 @@ class AppUser {
     this.photoUrl = '',
     this.favouriteVenue = '',
     this.favouriteGenre = '',
-    this.clubsVisited = const [],
+    this.clubsVisited = const [], //means empty list that never changes
     this.hoursThisMonth = 0,
     this.eventsThisMonth = 0,
     this.totalEvents = 0,
@@ -27,16 +29,13 @@ class AppUser {
     this.isPublic = true,
   });
 
-  /// Display name to show, falling back to [username].
-  ///
-  /// `display_name` is only written to Firestore once a user opens "Edit
-  /// Profile" and saves — registration only sets `username`. So anyone who
-  /// hasn't edited their profile yet has no display_name, which matters a lot
-  /// once we're rendering *other* users (attendee lists, chat), since we
-  /// can't fall back to FirebaseAuth's displayName the way profile_screen
-  /// does for the current user.
+
+  // this is a getter (function that looks like a field), auto called by user.name
+  //user.name will show displayName else username
   String get name => displayName.isNotEmpty ? displayName : username;
 
+//construct AppUser object from the dictionary
+// that Firestore returns via await firestore.collection("users").doc(id).get
   factory AppUser.fromFirestore(Map<String, dynamic> data, String uid) {
     return AppUser(
       uid: uid,

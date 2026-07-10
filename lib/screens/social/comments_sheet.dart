@@ -36,6 +36,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
     setState(() => _sending = true);
     final username = auth.currentDisplayName;
     final appUser = await UserService().getUser(user.uid);
+    final messenger = ScaffoldMessenger.of(context); //define messenger so that we dont use context after await in a nested catch block, so that flutter analyze wont flag it
 
 
     try {
@@ -43,7 +44,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
       _controller.clear();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar( //use messenger instead of the full form because context is not guaranteed valid after await
           SnackBar(content: Text('Comment error: $e')),
         );
       }
