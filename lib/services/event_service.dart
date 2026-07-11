@@ -34,4 +34,19 @@ class EventService {
             .map((d) => Event.fromFirestore(d.data() as Map<String, dynamic>, d.id))
             .toList());
   }
+
+  Future<List<String>> getDistinctVenues() async {
+    final snapshot = await _eventsCollection.get();
+    final venues = <String>{}; //creates a set which drops duplicates automatically
+
+    for (final doc in snapshot.docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      final venue = data['venue'] as String?;
+      if (venue != null && venue.isNotEmpty) venues.add(venue);
+    }
+
+    final list = venues.toList();
+    list.sort();
+    return list;
+  }
 }

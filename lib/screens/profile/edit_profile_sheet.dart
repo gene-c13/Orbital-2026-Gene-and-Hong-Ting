@@ -4,8 +4,10 @@ import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/services/user_service.dart';
+import 'package:after_hours/services/event_service.dart';
 import 'package:after_hours/widgets/app_text_field.dart';
 import 'package:after_hours/widgets/genre_picker.dart';
+import 'package:after_hours/widgets/venue_picker.dart';
 import 'package:after_hours/widgets/image_source_sheet.dart';
 import 'package:after_hours/widgets/primary_button.dart';
 
@@ -39,9 +41,10 @@ class EditProfileSheet extends StatefulWidget {
 
 class _EditProfileSheetState extends State<EditProfileSheet> {
   late final TextEditingController _nameController;
-  late final TextEditingController _venueController;
   late final TextEditingController _bioController;
 
+  List<String> _venues = [];
+  String?    _selectedVenue;
   String?    _selectedGenre;
   Uint8List? _pickedBytes;
   bool       _submitting = false;
@@ -51,16 +54,22 @@ class _EditProfileSheetState extends State<EditProfileSheet> {
   void initState() {
     super.initState();
     _nameController  = TextEditingController(text: widget.initialName);
-    _venueController = TextEditingController(text: widget.initialVenue);
     _bioController = TextEditingController(text: widget.initialBio);
+    // keep whatever venue was already saved on the profile pre-selected, unless it was blank
+    _selectedVenue   = widget.initialVenue.isNotEmpty ? widget.initialVenue : null;
     _selectedGenre   = widget.initialGenre;
     _isPublic = widget.initialIsPublic;
+    _loadVenues();
+  }
+
+  Future<void> _loadVenues() async {
+    final venues = await EventService().getDistinctVenues();
+    if (mounted) setState(() => _venues = venues);
   }
 
   @override
   void dispose() {
     _nameController.dispose();
-    _venueController.dispose();
     _bioController.dispose();
     super.dispose();
   }
@@ -87,6 +96,12 @@ class _EditProfileSheetState extends State<EditProfileSheet> {
     });
   }
 
+  void _showVenuePicker() {
+    showVenuePicker(context, _selectedVenue, _venues, (venue) {
+      setState(() => _selectedVenue = venue);
+    });
+  }
+
 Future<void> _save() async {
   final name = _nameController.text.trim();
   if (name.length < 2) {
@@ -100,7 +115,7 @@ Future<void> _save() async {
     await UserService().updateProfile(
       uid:            widget.uid,
       displayName:    name,
-      favouriteVenue: _venueController.text.trim(),
+      favouriteVenue: _selectedVenue ?? '',
       favouriteGenre: _selectedGenre ?? '',
       isPublic:       _isPublic,
       avatarBytes:    _pickedBytes,
@@ -341,11 +356,41 @@ Future<void> _save() async {
                     const SizedBox(height: 22),
                     _fieldLabel('FAVOURITE VENUE'),
                     const SizedBox(height: 8),
-                    AppTextField(
-                      controller: _venueController,
-                      hint:       'e.g. Zouk...',
-                      icon:       Icons.location_on_outlined,
-                      action:     TextInputAction.done,
+                    GestureDetector(
+                      onTap: _showVenuePicker,
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 17),
+                        decoration: BoxDecoration(
+                          color: kSurface,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0x44B14EFF)),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.location_on_outlined,
+                              color: _selectedVenue != null ? kAccent : kDim,
+                              size: 22,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                _selectedVenue ?? 'Select a venue...',
+                                style: TextStyle(
+                                  color: _selectedVenue != null ? Colors.white : kDim,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                            Icon(
+                              Icons.keyboard_arrow_down,
+                              color: _selectedVenue != null ? kAccent : kDim,
+                              size: 20,
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 40),
 

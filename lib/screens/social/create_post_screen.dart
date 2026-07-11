@@ -10,6 +10,8 @@ import 'package:after_hours/services/post_service.dart';
 import 'package:after_hours/widgets/image_source_sheet.dart';
 import 'package:after_hours/widgets/primary_button.dart';
 import 'package:after_hours/utils/time_format.dart';
+import 'package:after_hours/services/event_service.dart';
+import 'package:after_hours/widgets/venue_picker.dart';
 
 class CreatePostScreen extends StatefulWidget {
   const CreatePostScreen({super.key});
@@ -20,8 +22,10 @@ class CreatePostScreen extends StatefulWidget {
 
 class _CreatePostScreenState extends State<CreatePostScreen> {
   final _captionController = TextEditingController();
-  final _venueController   = TextEditingController();
   final _eventController   = TextEditingController();
+
+  List<String> _venues = [];
+  String? _selectedVenue;
 
   double     _rating     = 0;
   bool       _submitting = false;
@@ -32,9 +36,20 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   XFile?     _imageFile;
 
   @override
+  void initState() {
+    super.initState();
+    _loadVenues();
+  }
+
+  Future<void> _loadVenues() async {
+    final venues = await EventService().getDistinctVenues();
+    if (mounted) setState(() => _venues = venues);
+  }
+
+
+  @override
   void dispose() {
     _captionController.dispose();
-    _venueController.dispose();
     _eventController.dispose();
     super.dispose();
   }
@@ -156,9 +171,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       return;
     }
 
-    if (_venueController.text.trim().isEmpty) {
+    if (_selectedVenue == null || _selectedVenue!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter the venue.')),
+        const SnackBar(content: Text('Please select the venue.')),
       );
       return;
     }
@@ -177,7 +192,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       final appUser     = await UserService().getUser(user.uid);
       final username    = appUser?.username ?? '';
       final isPublic    = appUser?.isPublic ?? true;
-      final venue       = _venueController.text.trim();
+      final venue       = _selectedVenue ?? '';
       final hours       = _hoursOut();
       final postService = PostService();
       final imageUrl    = _imageFile != null
@@ -413,8 +428,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                       _card(
                         child: Column(
                           children: [
-                            _tagField(controller: _venueController, icon: Icons.location_on,
-                                hint: 'Venue (e.g. Fabric)', divider: true),
+                            _venueField(),
                             _tagField(controller: _eventController, icon: Icons.confirmation_number,
                                 hint: 'Event name (optional)', divider: false),
                           ],
@@ -539,6 +553,34 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       ],
     );
   }
+
+  Widget _venueField() {
+      return Column(
+        children: [
+          GestureDetector(
+            onTap: () => showVenuePicker(context, _selectedVenue, _venues, (venue) {
+              setState(() => _selectedVenue = venue);
+            }),
+            behavior: HitTestBehavior.opaque,
+            child: Row(
+              children: [
+                const Icon(Icons.location_on, color: kAccent, size: 18),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _selectedVenue ?? 'Venue (e.g. Fabric)',
+                    style: TextStyle(color: _selectedVenue != null ? Colors.white : kDim, fontSize: 15),
+                  ),
+                ),
+                const Icon(Icons.chevron_right, color: kDim, size: 17),
+              ],
+            ),
+          ),
+          const Divider(height: 22, color: kBorder),
+        ],
+      );
+    }
+  
 
   String _ratingLabel(double rating) {
     switch (rating.toInt()) {

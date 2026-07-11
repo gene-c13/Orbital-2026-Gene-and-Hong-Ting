@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/services/auth_service.dart';
+import 'package:after_hours/services/event_service.dart';
 import 'package:after_hours/screens/events/events_screen.dart';
 import 'package:after_hours/widgets/app_text_field.dart';
 import 'package:after_hours/widgets/genre_picker.dart';
+import 'package:after_hours/widgets/venue_picker.dart';
 import 'package:after_hours/widgets/primary_button.dart';
 
 class UsernameSetupScreen extends StatefulWidget {
@@ -14,22 +16,33 @@ class UsernameSetupScreen extends StatefulWidget {
 }
 
 class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
-  final _nameController  = TextEditingController();
-  final _venueController = TextEditingController();
+  final _nameController = TextEditingController();
 
+  List<String> _venues = [];
+  String? _selectedVenue;
   String? _selectedGenre;
   bool    _submitting = false;
 
   @override
+  void initState() {
+    super.initState();
+    _loadVenues();
+  }
+
+  Future<void> _loadVenues() async {
+    final venues = await EventService().getDistinctVenues();
+    if (mounted) setState(() => _venues = venues);
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
-    _venueController.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
     final name  = _nameController.text.trim();
-    final venue = _venueController.text.trim();
+    final venue = _selectedVenue ?? '';
 
     if (name.isEmpty)    { _snack('Please enter your name.'); return; }
     if (name.length < 2) { _snack('Name must be at least 2 characters.'); return; }
@@ -65,6 +78,12 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
   void _showGenrePicker() {
     showGenrePicker(context, _selectedGenre, (genre) {
       setState(() => _selectedGenre = genre);
+    });
+  }
+
+  void _showVenuePicker() {
+    showVenuePicker(context, _selectedVenue, _venues, (venue) {
+      setState(() => _selectedVenue = venue);
     });
   }
 
@@ -113,12 +132,41 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
 
                 _fieldLabel('Favourite venue'),
                 const SizedBox(height: 8),
-                AppTextField(
-                  controller: _venueController,
-                  hint: 'e.g. Fabric, Printworks...',
-                  icon: Icons.location_on_outlined,
-                  action: TextInputAction.done,
-                  onSubmitted: (_) => _save(),
+                GestureDetector(
+                  onTap: _showVenuePicker,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 17),
+                    decoration: BoxDecoration(
+                      color: kSurface,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0x44B14EFF)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.location_on_outlined,
+                          color: _selectedVenue != null ? kAccent : kDim,
+                          size: 22,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _selectedVenue ?? 'Select a venue...',
+                            style: TextStyle(
+                              color: _selectedVenue != null ? Colors.white : kDim,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                        Icon(
+                          Icons.keyboard_arrow_down,
+                          color: _selectedVenue != null ? kAccent : kDim,
+                          size: 20,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 20),
 
