@@ -66,6 +66,10 @@ class FriendService {
     });
   }
 
+  Future<void> cancelRequest(String fromUid, String toUid) async {
+    await _db.collection('friend_requests').doc('${fromUid}_$toUid').delete();
+  }
+
   Future<bool> isFriend(String currentUid, String otherUid) async {
     final doc = await _db
         .collection('users')

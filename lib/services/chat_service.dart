@@ -37,6 +37,7 @@ class ChatService {
     batch.update(chatRef, { //queue second write that updates the chat document's preview fields
       'last_message':      trimmed,
       'last_message_time': FieldValue.serverTimestamp(),
+      'last_sender_uid' : senderUid,
     });
     await batch.commit();
   }

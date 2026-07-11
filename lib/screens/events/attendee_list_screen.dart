@@ -112,12 +112,21 @@ class AttendeeListScreen extends StatelessWidget {
   }
 }
 
-class _AttendeeTile extends StatelessWidget {
+class _AttendeeTile extends StatefulWidget {
   final AppUser user;
   final String currentUid;
+  
+  
 
   const _AttendeeTile({required this.user, required this.currentUid});
 
+  @override
+  State<_AttendeeTile> createState() => _AttendeeTileState();
+}
+
+class _AttendeeTileState extends State<_AttendeeTile> {
+
+  bool _hovering = false;
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -131,34 +140,43 @@ class _AttendeeTile extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: TapToProfile(
-              uid: user.uid,
-              child: Row(
-                children: [
-                  UserAvatar(
-                    photoUrl: user.photoUrl,
-                    displayName: user.name,
-                    radius: 20,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      user.name,
-                      style: const TextStyle(
-                        color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700,
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              onEnter: (_) => setState(() => _hovering = true),
+              onExit: (_) => setState(() => _hovering = false),
+              child: TapToProfile(
+                uid: widget.user.uid,
+                child: Row(
+                  children: [
+                    UserAvatar(
+                      photoUrl: widget.user.photoUrl,
+                      displayName: widget.user.name,
+                      radius: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        widget.user.name,
+                        style: TextStyle(
+                          color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700,
+                            decoration: _hovering ? TextDecoration.underline : TextDecoration.none,
+                            decorationColor: Colors.white,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
+              
+            )
+            
           ),
           FutureBuilder<bool>(
-            future: FriendService().isFriend(currentUid, user.uid),
+            future: FriendService().isFriend(widget.currentUid, widget.user.uid),
             builder: (context, snap) {
               if (!snap.hasData || !snap.data!) return const SizedBox.shrink();
               return TextButton(
-                onPressed: () => openChat(context, user.uid, user.name),
+                onPressed: () => openChat(context, widget.user.uid, widget.user.name),
                 child: const Text('Message', style: TextStyle(color: kAccent, fontWeight: FontWeight.w700)),
               );
             },

@@ -125,20 +125,23 @@ class _OtherUserProfileViewState extends State<OtherUserProfileView> {
 
           final alreadyFriend = snapshot.data![0];
           final pending       = snapshot.data![1] || _requestSent;
-          final canMessage    = alreadyFriend || appUser.isPublic;
+          final canMessage    = alreadyFriend;
 
           final followLabel = alreadyFriend ? 'Following'
-                            : pending       ? 'Requested'
+                            : pending       ? 'Pending'
                             : '+ Add Friend';
 
           VoidCallback? followAction;
                 if (alreadyFriend) {
-                  followAction = () => _confirmUnfriend(appUser!);   // the dialog, extracted
+                  followAction = () => _confirmUnfriend(appUser);   // the dialog, extracted
                 } else if (pending) {
-                  followAction = null;                                // Requested → disabled
-                } else {
                   followAction = () async {
-                    await _friendService.sendFriendRequest(currentUid, appUser!.uid);
+                    await _friendService.cancelRequest(currentUid, appUser.uid);
+                    if (mounted) setState(() => _requestSent = false);
+                    };
+                  } else {
+                  followAction = () async {
+                    await _friendService.sendFriendRequest(currentUid, appUser.uid);
                     if (mounted) setState(() => _requestSent = true);
                   };
                 }

@@ -5,10 +5,14 @@ import 'package:after_hours/services/auth_service.dart';
 import 'package:after_hours/services/chat_service.dart';
 import 'package:after_hours/utils/time_format.dart';
 import 'package:after_hours/widgets/tap_to_profile.dart';
+import 'package:after_hours/services/friend_service.dart';
+
+bool? _isFriend;
 
 class ChatScreen extends StatefulWidget {
   final String otherUid;
   final String otherDisplayName;
+  
 
   const ChatScreen({
     super.key,
@@ -45,7 +49,8 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _initChat() async {
     if (_currentUid.isEmpty) return; // no session, bail out safely
     final id = await _chatService.getOrCreateChat(_currentUid, widget.otherUid);
-    if (mounted) setState(() => _chatId = id);
+    final friend = await FriendService().isFriend(_currentUid, widget.otherUid);
+    if (mounted) setState(() { _chatId = id; _isFriend = friend;});
   }
 
   Future<void> _send() async {
@@ -193,51 +198,76 @@ class _ChatScreenState extends State<ChatScreen> {
                       ),
               ),
               const Divider(height: 1, color: kBorder),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: kSurface,
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: kBorder),
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 18),
-                        child: TextField(
-                          controller: _controller,
-                          style: const TextStyle(color: Colors.white),
-                          textInputAction: TextInputAction.send,
-                          onSubmitted: (_) => _send(),
-                          decoration: const InputDecoration(
-                            hintText: 'Message...',
-                            hintStyle: TextStyle(color: kDim),
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(vertical: 12),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    GestureDetector(
-                      onTap: _send,
-                      child: Container(
-                        width: 44,
-                        height: 44,
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(colors: [kAccent, kPink]),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              _isFriend == true ? _inputBar() : _blockedBar(),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _blockedBar() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.lock_outline, color: kDim, size: 16),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              'Add ${widget.otherDisplayName} as a friend to send a message!',
+              style: const TextStyle(color: kDim, fontSize: 13),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _inputBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: kSurface,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: kBorder),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              child: TextField(
+                controller: _controller,
+                style: const TextStyle(color: Colors.white),
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) => _send(),
+                decoration: const InputDecoration(
+                  hintText: 'Message...',
+                  hintStyle: TextStyle(color: kDim),
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          GestureDetector(
+            onTap: _send,
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(colors: [kAccent, kPink]),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
+            ),
+          ),
+        ],
       ),
     );
   }

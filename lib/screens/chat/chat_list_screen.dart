@@ -105,6 +105,12 @@ class ChatListScreen extends StatelessWidget { //stateless because the streambui
                             if (other == null) return const SizedBox.shrink();
 
                             final lastMessage = data['last_message'] as String? ?? '';
+                            final lastSender = data['last_sender_uid'] as String? ?? '';
+                            final isMine = lastSender == currentUid;
+
+                            final preview = lastMessage.isEmpty
+                              ? '@${other.username}'
+                              : isMine ? 'You: $lastMessage' : lastMessage;
 
                             return Container(
                               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -120,7 +126,7 @@ class ChatListScreen extends StatelessWidget { //stateless because the streambui
                                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
                               ),
                               subtitle: Text(
-                                lastMessage.isEmpty ? '@${other.username}' : lastMessage,
+                                preview,
                                 style: const TextStyle(color: kDim, fontSize: 13),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
