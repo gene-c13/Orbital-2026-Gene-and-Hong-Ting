@@ -54,7 +54,7 @@ Fields to extract:
 - price: entry/ticket price only, ignore bottle or sofa package prices (string or null)"
 - has_guestlist: true if guestlist is mentioned (boolean)
 - dj: DJ name(s) performing. Might follow "ft" (string or null)
-- guestlist_url: URL to guestlist form if present (string or null)
+- guestlist_url: URL to guestlist form, or ticket form, if present (string or null)
 
 Return only valid JSON, no explanation. If not an event, return the word null."""
 
@@ -71,10 +71,10 @@ Return only valid JSON, no explanation. If not an event, return the word null.""
         return None
 
     try:
-        parsed = json.loads(response_text)
+        parsed = json.loads(response_text) #converts json text to python dict
         if isinstance(parsed, list):
-            return parsed
-        return [parsed]
+            return parsed #edge case of a JSON arrary returned 
+        return [parsed] #always wrap dict(event) in a list(events)
     except json.JSONDecodeError:
         print(f"Could not parse Claude response: {response_text}")
         return None
@@ -90,9 +90,9 @@ def normalise_venue(venue_str):
     if not venue_str:
         return 'unknown'
     v = venue_str.lower()
-    for keyword in VENUE_KEYWORDS:
-        if keyword in v:
-            return VENUE_MAP.get(keyword, keyword)
+    for keyword in VENUE_KEYWORDS: 
+        if keyword in v: #eg. cherry discotheque has "cherry"
+            return VENUE_MAP.get(keyword, keyword) #eg. since "cherry" not in venue_map, return "cherry"
     return v
 
 
@@ -101,7 +101,7 @@ def write_event_to_firestore(db, event, source_channel):
         return
 
     if isinstance(event.get('dj'), list):
-        event['dj'] = ', '.join(event['dj'])
+        event['dj'] = ', '.join(event['dj']) #add a , separator between each dj in the list
 
     if source_channel == '@miggyt_guestlist' :
         event['venue'] = 'Dashi Gogo'
@@ -116,6 +116,7 @@ def write_event_to_firestore(db, event, source_channel):
     venue = normalise_venue(venue_raw).replace(' ', '-')
     doc_id = venue + '-' + event['date']
 
+    #deduplication logic
     existing = db.collection('events').document(doc_id).get()
     if existing.exists:
         existing_data = existing.to_dict() #converts firestore doc to python
@@ -128,7 +129,7 @@ def write_event_to_firestore(db, event, source_channel):
     # check if this venue already has an event on an adjacent date (±1 day)
     # prevents duplicates when a repost makes Claude extract a slightly different date
     event_date = datetime.strptime(event['date'], '%Y-%m-%d')
-    for offset in [-1, 1]:
+    for offset in [-1, 1]: #a for-loop over 2 item list, firsst iteration:-1, second: 1
         neighbour_date = (event_date + timedelta(days=offset)).strftime('%Y-%m-%d')
         neighbour_id = venue + '-' + neighbour_date
         if db.collection('events').document(neighbour_id).get().exists:
