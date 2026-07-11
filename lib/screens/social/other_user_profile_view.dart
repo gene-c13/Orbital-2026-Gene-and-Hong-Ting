@@ -175,9 +175,9 @@ class _OtherUserProfileViewState extends State<OtherUserProfileView> {
           children: [
             Text(displayName,
                 style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w600)),
-            if ((appUser?.bio ?? '').isNotEmpty) ...[
+            if ((appUser.bio).isNotEmpty) ...[
               const SizedBox(height: 6),
-              Text(appUser!.bio, style: const TextStyle(color: kMuted, fontSize: 14, height: 1.4)),
+              Text(appUser.bio, style: const TextStyle(color: kMuted, fontSize: 14, height: 1.4)),
             ],
           ],
         ),
