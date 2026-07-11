@@ -23,7 +23,19 @@ class FriendsScreen extends StatelessWidget {
         child: SafeArea(
           child: Column(
             children: [
-              // header row: back button + Text('FRIENDS', style: kNectarine(...))
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 12, 20, 12),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                    const SizedBox(width: 4),
+                    Text('FRIENDS', style: kNectarine(size: 24, letterSpacing: 3)),
+                  ],
+                ),
+              ),
               Expanded(child: _friendsList(currentUid)),
             ],
           ),
