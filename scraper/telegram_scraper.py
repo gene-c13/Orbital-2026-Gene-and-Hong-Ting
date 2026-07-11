@@ -2,6 +2,7 @@ import asyncio
 import json
 from datetime import datetime, timezone, timedelta
 from telethon import TelegramClient
+from telethon.tl.types import MessageEntityTextUrl
 import anthropic
 import firebase_admin
 from firebase_admin import credentials, firestore
@@ -24,7 +25,7 @@ CHANNELS = [
     '@marqueesgofficial'
 ]
 
-DAYS_TO_LOOK_BACK = 7
+DAYS_TO_LOOK_BACK = 30
 
 
 def init_firestore():
@@ -54,7 +55,7 @@ Fields to extract:
 - price: entry/ticket price only, ignore bottle or sofa package prices (string or null)"
 - has_guestlist: true if guestlist is mentioned (boolean)
 - dj: DJ name(s) performing. Might follow "ft" (string or null)
-- guestlist_url: URL to guestlist form, or ticket form, if present (string or null)
+- guestlist_url: URL to guestlist form, or ticket form, if present. If the message includes a "[Hidden links in this message]" section, prefer a URL from there whose label suggests tickets, guestlist, RSVP, or sign up. (string or null)
 
 Return only valid JSON, no explanation. If not an event, return the word null."""
 
@@ -80,10 +81,33 @@ Return only valid JSON, no explanation. If not an event, return the word null.""
         return None
 
 
+def enrich_with_hidden_links(message):
+    # Telegram lets someone hyperlink a word/phrase to a URL that never shows up in
+    # the plain text (e.g. "TAP HERE" linking to a Google Form behind the scenes).
+    # get_entities_text() pulls out (entity, display_text) pairs for us — it also
+    # handles Telegram's UTF-16 offset counting internally, which is easy to get
+    # wrong doing it by hand, so it's worth using instead of slicing the text ourselves.
+    hidden_links = message.get_entities_text(MessageEntityTextUrl)
+    if not hidden_links:
+        return message.text
+
+    links_section = "\n".join(f'"{label}" links to: {entity.url}' for entity, label in hidden_links)
+    return f"{message.text}\n\n[Hidden links in this message]\n{links_section}"
+
+
 VENUE_KEYWORDS = ['yang', 'riverhouse', 'cherry', 'marquee', 'zouk', 'canvas', 'dashi']
 
 VENUE_MAP = {
     'riverhouse': 'yang',
+}
+
+VENUE_DISPLAY_NAMES = {
+    'yang': 'Yang',
+    'cherry': 'Cherry',
+    'marquee': 'Marquee',
+    'zouk': 'Zouk',
+    'canvas': 'Canvas',
+    'dashi': 'Dashi Gogo',
 }
 
 def normalise_venue(venue_str):
@@ -113,7 +137,9 @@ def write_event_to_firestore(db, event, source_channel):
     event['booking_url'] = event.get('guestlist_url', '')
 
     venue_raw = event.get('venue', event.get('name', 'unknown'))
-    venue = normalise_venue(venue_raw).replace(' ', '-')
+    venue_norm = normalise_venue(venue_raw)
+    event['venue'] = VENUE_DISPLAY_NAMES.get(venue_norm,venue_raw.strip().title())
+    venue = venue_norm.replace(' ', '-')
     doc_id = venue + '-' + event['date']
 
     #deduplication logic
@@ -150,7 +176,7 @@ async def scrape_channels():
             print(f"\nScraping {channel}...")
 
             try:
-                messages = await client.get_messages(channel, limit=30)
+                messages = await client.get_messages(channel, limit=200)
 
                 for message in messages:
                     if not message.text:
@@ -163,7 +189,8 @@ async def scrape_channels():
                     print(f"  Processing: {message.text[:60]}...")
 
                     message_date = message.date.astimezone(timezone(timedelta(hours=8))).strftime('%Y-%m-%d')
-                    events = extract_event_with_claude(message.text, channel, message_date)
+                    enriched_text = enrich_with_hidden_links(message)
+                    events = extract_event_with_claude(enriched_text, channel, message_date)
                     if events:
                         for event in events:
                             write_event_to_firestore(db, event, channel)
