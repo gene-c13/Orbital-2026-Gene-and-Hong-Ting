@@ -243,7 +243,7 @@ Future<void> _save() async {
                           const Icon(Icons.alternate_email, color: kDim, size: 20),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: Text('@${widget.username}',
+                            child: Text(widget.username,
                                 style: const TextStyle(color: kDim, fontSize: 16)),
                           ),
                           const Icon(Icons.lock_outline, color: kDim, size: 16),
