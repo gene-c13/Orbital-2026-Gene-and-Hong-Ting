@@ -25,7 +25,7 @@ CHANNELS = [
     '@marqueesgofficial'
 ]
 
-DAYS_TO_LOOK_BACK = 30
+DAYS_TO_LOOK_BACK = 7
 
 
 def init_firestore():
@@ -60,12 +60,16 @@ Fields to extract:
 Return only valid JSON, no explanation. If not an event, return the word null."""
 
     message = client.messages.create(
-        model="claude-haiku-4-5-20251001",
+        model="claude-sonnet-5",
         max_tokens=500,
         messages=[{"role": "user", "content": prompt}]
     )
 
-    response_text = message.content[0].text.strip()
+    # message.content can hold more than one block (e.g. a thinking block ahead of
+    # the actual answer), so grab the block whose type is "text" instead of assuming
+    # the answer is always at position [0]
+    text_blocks = [block.text for block in message.content if block.type == "text"]
+    response_text = "".join(text_blocks).strip()
     response_text = response_text.replace('```json', '').replace('```', '').strip()
 
     if response_text.lower() == 'null':
@@ -136,8 +140,14 @@ def write_event_to_firestore(db, event, source_channel):
     event['image_url'] = ''
     event['booking_url'] = event.get('guestlist_url', '')
 
-    venue_raw = event.get('venue', event.get('name', 'unknown'))
+    # .get(key, default) only falls back when the key is missing — Claude sometimes
+    # returns "venue": null explicitly, which .get() would happily pass through as
+    # None instead of catching it, so `or` is used here to fall through on that too
+    venue_raw = event.get('venue') or event.get('name') or 'unknown'
     venue_norm = normalise_venue(venue_raw)
+    if venue_norm == 'zouk' :
+        print (f" Skipped (Zouk handled by zouk_scraper.py) : {event['name']}")
+        return
     event['venue'] = VENUE_DISPLAY_NAMES.get(venue_norm,venue_raw.strip().title())
     venue = venue_norm.replace(' ', '-')
     doc_id = venue + '-' + event['date']
@@ -152,13 +162,16 @@ def write_event_to_firestore(db, event, source_channel):
             print(f"  Skipped (existing has more info): {event['name']}")
             return  #if existing doc has equal or more filled fields, skip the write (keep existing doc) and exit fxn
 
-    # check if this venue already has an event on an adjacent date (±1 day)
-    # prevents duplicates when a repost makes Claude extract a slightly different date
+    # check if this venue already has an event with the SAME NAME on an adjacent date
+    # (±1 day) — prevents duplicates when a repost makes Claude extract a slightly
+    # different date for the same event, without wrongly skipping a genuinely
+    # different event that just happens to land at the same venue the day before/after
     event_date = datetime.strptime(event['date'], '%Y-%m-%d')
     for offset in [-1, 1]: #a for-loop over 2 item list, firsst iteration:-1, second: 1
         neighbour_date = (event_date + timedelta(days=offset)).strftime('%Y-%m-%d')
         neighbour_id = venue + '-' + neighbour_date
-        if db.collection('events').document(neighbour_id).get().exists:
+        neighbour = db.collection('events').document(neighbour_id).get()
+        if neighbour.exists and neighbour.to_dict().get('name', '').strip().lower() == event['name'].strip().lower():
             print(f"  Skipped (nearby duplicate): {event['name']} — {neighbour_id} already exists")
             return
 
@@ -176,7 +189,7 @@ async def scrape_channels():
             print(f"\nScraping {channel}...")
 
             try:
-                messages = await client.get_messages(channel, limit=200)
+                messages = await client.get_messages(channel, limit=30)
 
                 for message in messages:
                     if not message.text:
