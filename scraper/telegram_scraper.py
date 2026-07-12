@@ -60,7 +60,7 @@ Fields to extract:
 Return only valid JSON, no explanation. If not an event, return the word null."""
 
     message = client.messages.create(
-        model="claude-sonnet-5",
+        model="claude-haiku-4-5-20251001",
         max_tokens=500,
         messages=[{"role": "user", "content": prompt}]
     )

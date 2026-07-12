@@ -260,7 +260,7 @@ class _EventsScreenState extends State<EventsScreen> {
       );
     }
 
-    return ListView.builder(
+    return ListView.builder( //ListView displays its children one after another in scrollable list
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
       itemCount: snapshot.data!.length,
       itemBuilder: (context, index) => _eventCard(snapshot.data![index]),
@@ -460,9 +460,9 @@ class _EventsScreenState extends State<EventsScreen> {
           );
         }
 
-        final groups = <String, List<Event>>{};
+        final groups = <String, List<Event>>{}; //groups is a Map, group same date events together
         for (final e in results) {
-          groups.putIfAbsent(e.date, () => []).add(e);
+          groups.putIfAbsent(e.date, () => []).add(e); //if e.date absent, create empty list. both scenarios, add the event into the list in the dict
         }
 
         final children = <Widget>[];
