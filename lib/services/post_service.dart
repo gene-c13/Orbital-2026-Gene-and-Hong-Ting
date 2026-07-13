@@ -215,4 +215,28 @@ class PostService {
     });
     await batch.commit();
   }
+
+  Stream<List<QueryDocumentSnapshot>> userPostsStream({
+  required String viewerUid,
+  required String profileUid,
+}) {
+  final base = _db.collection('posts').where('uid', isEqualTo: profileUid);
+
+  if (viewerUid == profileUid) {
+    return base.orderBy('created_at', descending: true).snapshots().map((s) => s.docs);
+  }
+
+  // watch the friendship doc itself, so the query swaps live if it changes
+  return _db
+      .collection('users').doc(viewerUid)
+      .collection('friends').doc(profileUid)
+      .snapshots()
+      .asyncExpand((friendDoc) {
+        final isFriend = friendDoc.exists;
+        final query = isFriend
+            ? base.orderBy('created_at', descending: true)
+            : base.where('is_public', isEqualTo: true).orderBy('created_at', descending: true);
+        return query.snapshots().map((s) => s.docs);
+      });
+}
 }

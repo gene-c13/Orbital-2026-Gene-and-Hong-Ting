@@ -7,6 +7,8 @@ import 'package:after_hours/models/user.dart';
 import 'package:after_hours/widgets/user_avatar.dart';
 import 'package:after_hours/widgets/navigation_helper.dart';
 import 'package:after_hours/widgets/primary_button.dart';
+import 'package:after_hours/widgets/user_posts_list.dart';
+import 'package:after_hours/widgets/post_card.dart';
 
 // Read-only profile view for someone who ISN'T the signed-in user.
 // Opened from things like the comments sheet, where you tap another
@@ -89,6 +91,15 @@ class _OtherUserProfileViewState extends State<OtherUserProfileView> {
                         
                           _iconRow(Icons.sick_outlined, '${appUser.pukeCount} 🤮 lifetime'),
 
+                          const SizedBox(height: 24),
+                          UserPostsList(
+                            uid: appUser.uid,
+                            viewerUid: currentUid,
+                            itemBuilder: (context, doc) {
+                              final data = doc.data() as Map<String, dynamic>;
+                              return PostCard(postId: doc.id, data: data);
+                            },
+                          ),
                         ],
                       ),
                     );

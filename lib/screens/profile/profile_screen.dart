@@ -9,6 +9,8 @@ import 'package:after_hours/models/user.dart';
 import 'package:after_hours/widgets/user_avatar.dart';
 import 'package:after_hours/screens/profile/edit_profile_sheet.dart';
 import 'package:after_hours/widgets/primary_button.dart';
+import 'package:after_hours/widgets/user_posts_list.dart';
+import 'package:after_hours/widgets/post_card.dart';
 
 
 class ProfileScreen extends StatefulWidget {
@@ -124,6 +126,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                                 if (appUser != null)
                                   _iconRow(Icons.sick_outlined, '${appUser.pukeCount} 🤮 lifetime'),
+
+                                const SizedBox(height: 24),
+                                UserPostsList(
+                                  uid: user.uid,
+                                  viewerUid: user.uid,
+                                  itemBuilder: (context, doc) {
+                                    final data = doc.data() as Map<String, dynamic>;
+                                    return PostCard(postId: doc.id, data: data);
+                                  },
+                                ),
                               ],
                             ),
                           ),
