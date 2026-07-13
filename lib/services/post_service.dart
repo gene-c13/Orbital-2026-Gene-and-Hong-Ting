@@ -135,6 +135,8 @@ class PostService {
 
 
     final batch = _db.batch();
+    final userDoc = await _db.collection('users').doc(uid).get();
+    final photoUrl = userDoc.data()?['photo_url'] ?? '';
 
     // pre-generate a doc ref so we can batch.set() instead of posts.add()
     // (add() can't be used in a batch because it auto-generates the ID internally)
@@ -157,6 +159,7 @@ class PostService {
       'hours_out':     hoursOut > 0 ? hoursOut : null,
       'is_public':     isPublic,
       'created_at':    FieldValue.serverTimestamp(),
+      'photo_url': photoUrl,
     });
 
     final Map<String, dynamic> updates = {

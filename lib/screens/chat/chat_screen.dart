@@ -1,3 +1,5 @@
+import 'package:after_hours/services/user_service.dart';
+import 'package:after_hours/widgets/user_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:after_hours/theme/app_theme.dart';
@@ -6,6 +8,7 @@ import 'package:after_hours/services/chat_service.dart';
 import 'package:after_hours/utils/time_format.dart';
 import 'package:after_hours/widgets/tap_to_profile.dart';
 import 'package:after_hours/services/friend_service.dart';
+
 
 bool? _isFriend;
 
@@ -30,6 +33,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final _chatService    = ChatService();
 
   String? _chatId;
+  String? _otherPhotoUrl;
   String get _currentUid => AuthService().currentUid ?? '';
   int _lastMessageCount = 0; // track count so we only scroll when a new message arrives
 
@@ -47,10 +51,13 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _initChat() async {
+    
     if (_currentUid.isEmpty) return; // no session, bail out safely
     final id = await _chatService.getOrCreateChat(_currentUid, widget.otherUid);
     final friend = await FriendService().isFriend(_currentUid, widget.otherUid);
     if (mounted) setState(() { _chatId = id; _isFriend = friend;});
+    final other = await UserService().getUser(widget.otherUid);
+    if (mounted) setState(() => _otherPhotoUrl = other?.photoUrl);
   }
 
   Future<void> _send() async {
@@ -99,14 +106,11 @@ class _ChatScreenState extends State<ChatScreen> {
                     const SizedBox(width: 4),
                     TapToProfile(
                       uid: widget.otherUid,
-                      child: Row(children: [CircleAvatar(
-                      radius: 18,
-                      backgroundColor: kAccent.withValues(alpha: 0.3),
-                      child: Text(
-                        (widget.otherDisplayName.isEmpty ? '?' : widget.otherDisplayName[0]).toUpperCase(),  //ternary operator to prevent crash if name is empty
-                         style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                      child: Row(children: [UserAvatar(
+                        photoUrl: _otherPhotoUrl,
+                        displayName: widget.otherDisplayName,
+                        radius: 18,
                       ),
-                    ),
                     const SizedBox(width: 12),
                     Text(
                       widget.otherDisplayName,
