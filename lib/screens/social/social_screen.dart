@@ -7,7 +7,7 @@ import 'package:after_hours/screens/social/user_search_screen.dart';
 import 'package:after_hours/services/post_service.dart';
 import 'dart:async';
 import 'package:after_hours/services/auth_service.dart';
-import 'package:after_hours/screens/social/friend_requests_screen.dart';
+import 'package:after_hours/widgets/notification_bell.dart';
 import 'package:after_hours/widgets/post_card.dart';
 
 class SocialScreen extends StatefulWidget {
@@ -72,12 +72,7 @@ class _SocialScreenState extends State<SocialScreen> {
                       style: kNectarine(size: 32, letterSpacing: 3),
                     ),
                    const Spacer(),
-                   IconButton(
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const FriendRequestsScreen()),
-                      ),
-                      icon: const Icon(Icons.notifications_none, color: Colors.white, size: 22),
-                    ),
+                   const NotificationBell(),
                     IconButton(
                       onPressed: () => Navigator.of(context).push(
                         MaterialPageRoute(builder: (_) => const UserSearchScreen()),

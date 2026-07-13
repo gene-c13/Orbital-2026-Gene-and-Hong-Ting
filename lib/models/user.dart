@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 // this model defines profile data and instruct how to convert Firestore doc 
 //into a usable AppUser object (just like in Events.dart)
 class AppUser {
@@ -14,6 +15,8 @@ class AppUser {
   final int totalEvents;
   final int pukeCount;
   final bool isPublic;
+  final Timestamp? notificationsSeenAt;
+  
 
   const AppUser({
     required this.uid,
@@ -29,6 +32,7 @@ class AppUser {
     this.pukeCount = 0,
     this.isPublic = true,
     this.bio = '',
+    this.notificationsSeenAt,
   });
 
 
@@ -53,6 +57,7 @@ class AppUser {
       pukeCount: data['puke_count'] ?? 0,
       isPublic: data['is_public'] as bool? ?? true,
       bio: data['bio'] ?? '',
+      notificationsSeenAt: data['notifications_seen_at'] as Timestamp?,
     );
   }
 }

@@ -1,4 +1,13 @@
 import 'package:flutter/material.dart';
+// Lets code outside the widget tree (like NotificationToastListener) show a
+// SnackBar without needing a local BuildContext from whatever screen
+// happens to be on top right now.
+final scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+
+// Gives access to the app's single Overlay from outside the widget tree —
+// used to insert the top-of-screen notification banner on top of whatever
+// screen or dialog is currently showing, regardless of which one that is.
+final navigatorKey = GlobalKey<NavigatorState>();
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const Color kBg      = Color(0xFF070010);

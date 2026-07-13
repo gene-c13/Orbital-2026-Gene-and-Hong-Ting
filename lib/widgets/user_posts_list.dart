@@ -25,15 +25,25 @@ class UserPostsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<List<QueryDocumentSnapshot>>(
-      stream: PostService().userPostsStream(viewerUid: viewerUid, profileUid: uid),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return const Padding(
-            padding: EdgeInsets.all(16),
-            child: Text('Couldn\'t load posts.', style: TextStyle(color: kMuted, fontSize: 13)),
-          );
-        }
+    return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Padding(
+        padding: EdgeInsets.fromLTRB(10,0,0,4),
+        child: Text(
+          'Posts',
+          style: TextStyle(color: Colors.white, fontSize: 25, fontWeight: FontWeight.w900),
+        ),
+      ),
+      StreamBuilder<List<QueryDocumentSnapshot>>(
+        stream: PostService().userPostsStream(viewerUid: viewerUid, profileUid: uid),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text('Couldn\'t load posts.', style: TextStyle(color: kMuted, fontSize: 13)),
+            );
+          }
 
         if (!snapshot.hasData) {
           return const Padding(
@@ -58,6 +68,8 @@ class UserPostsList extends StatelessWidget {
           itemBuilder: (context, index) => itemBuilder(context, docs[index]),
         );
       },
+      )
+    ]
     );
   }
 }
