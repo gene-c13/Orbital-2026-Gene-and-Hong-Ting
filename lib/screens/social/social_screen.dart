@@ -51,12 +51,8 @@ class _SocialScreenState extends State<SocialScreen> {
 
     _feedSub = PostService().feedStream(_currentUid!).listen(
       (docs) {
-        if (mounted) setState(() { _visibleDocs = docs; _initialLoad = false; });
-      },
-      onError: (e) {
-        debugPrint('social feed error: $e');
-        if (mounted) setState(() { _hasError = true; _initialLoad = false; });
-      },
+        if (mounted) setState(() { _visibleDocs = docs; _initialLoad = false; _hasError = false;});
+      }
     );
   }
 

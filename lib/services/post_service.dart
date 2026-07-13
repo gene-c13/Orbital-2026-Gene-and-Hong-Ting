@@ -132,6 +132,8 @@ class PostService {
     required double hoursOut,
     required bool isPublic,
   }) async {
+
+
     final batch = _db.batch();
 
     // pre-generate a doc ref so we can batch.set() instead of posts.add()
