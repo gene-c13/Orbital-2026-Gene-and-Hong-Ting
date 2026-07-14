@@ -5,7 +5,7 @@ import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/firebase_options.dart';
 import 'package:after_hours/screens/auth/login_screen.dart';
 import 'package:after_hours/screens/auth/email_verification_screen.dart';
-import 'package:after_hours/screens/auth/username_setup_screen.dart';
+import 'package:after_hours/screens/auth/profile_setup_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:after_hours/screens/events/events_screen.dart';
 import 'package:after_hours/widgets/notification_toast_listener.dart';
@@ -60,8 +60,8 @@ class AfterHoursApp extends StatelessWidget {
               // a user who killed the app before verifying should still be sent to the
               // verification screen, not straight into the app
               if (!user.emailVerified) return const EmailVerificationScreen();
-              // a user who completed verification but not username setup goes there next
-              if ((user.displayName ?? '').isEmpty) return const UsernameSetupScreen();
+              // a user who completed verification but not profile setup goes there next
+              if ((user.displayName ?? '').isEmpty) return const ProfileSetupScreen();
               return const EventsScreen(); //if logged in and fully set up, show events
             }
             return const LoginScreen(); //if not logged in, show login screen

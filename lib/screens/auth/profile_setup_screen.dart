@@ -8,14 +8,14 @@ import 'package:after_hours/widgets/genre_picker.dart';
 import 'package:after_hours/widgets/venue_picker.dart';
 import 'package:after_hours/widgets/primary_button.dart';
 
-class UsernameSetupScreen extends StatefulWidget {
-  const UsernameSetupScreen({super.key});
+class ProfileSetupScreen extends StatefulWidget {
+  const ProfileSetupScreen({super.key});
 
   @override
-  State<UsernameSetupScreen> createState() => _UsernameSetupScreenState();
+  State<ProfileSetupScreen> createState() => _ProfileSetupScreenState();
 }
 
-class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
+class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   final _nameController = TextEditingController();
 
   List<String> _venues = [];

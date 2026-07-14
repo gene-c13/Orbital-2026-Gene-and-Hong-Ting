@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/services/auth_service.dart';
 import 'package:after_hours/screens/events/events_screen.dart';
-import 'package:after_hours/screens/auth/username_setup_screen.dart';
+import 'package:after_hours/screens/auth/profile_setup_screen.dart';
 import 'package:after_hours/screens/auth/login_screen.dart';
 import 'package:after_hours/widgets/primary_button.dart';
 
@@ -25,7 +25,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   @override
   void initState() {
     super.initState();
-    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) => _checkVerified(auto: true));
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) => _checkVerified(auto: true)); //auto check every 5s
   }
 
   @override
@@ -46,7 +46,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
           MaterialPageRoute(
             builder: (_) => auth.hasDisplayName
                 ? const EventsScreen()
-                : const UsernameSetupScreen(),
+                : const ProfileSetupScreen(),
           ),
         );
       }

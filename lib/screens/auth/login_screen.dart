@@ -5,7 +5,7 @@ import 'package:after_hours/services/auth_service.dart';
 import 'package:after_hours/screens/events/events_screen.dart';
 import 'package:after_hours/screens/auth/register_screen.dart';
 import 'package:after_hours/screens/auth/email_verification_screen.dart';
-import 'package:after_hours/screens/auth/username_setup_screen.dart';
+import 'package:after_hours/screens/auth/profile_setup_screen.dart';
 import 'package:after_hours/widgets/primary_button.dart';
 
 class LoginScreen extends StatefulWidget { //stateful to track state (error?user typing?)
@@ -43,7 +43,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (_) => auth.hasDisplayName ? const EventsScreen() : const UsernameSetupScreen(),
+          builder: (_) => auth.hasDisplayName ? const EventsScreen() : const ProfileSetupScreen(),
         ),
       );
     } on FirebaseAuthException catch (e) {
