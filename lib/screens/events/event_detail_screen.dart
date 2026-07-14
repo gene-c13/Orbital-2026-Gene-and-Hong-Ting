@@ -14,8 +14,10 @@ import 'package:after_hours/widgets/tap_to_profile.dart';
 
 class EventDetailScreen extends StatelessWidget {
   final Event event;
+  late final Stream<List<String>> _attendeeUidsStream =
+      AttendanceService().attendeeUidsStream(event.id);
 
-  const EventDetailScreen({super.key, required this.event});
+  EventDetailScreen({super.key, required this.event});
 
 Future<void> _launchBookingUrl(BuildContext context) async {
   if (event.bookingUrl.isEmpty) return;
@@ -44,9 +46,9 @@ Future<void> _launchBookingUrl(BuildContext context) async {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      bottomNavigationBar: buildNavBar(0, (i) {
+      bottomNavigationBar: buildNavBar(0, (i) { //0 means "home" tab is highlighted
         if (i == 0) {
-          Navigator.of(context).pop();
+          Navigator.of(context).pop(); //if u tap index 0, just pop screen(go back)
           return;
         }
         goToTab(context, i);
@@ -260,7 +262,7 @@ Future<void> _launchBookingUrl(BuildContext context) async {
     final currentUid = AuthService().currentUid;
 
     return StreamBuilder<List<String>>(
-      stream: AttendanceService().attendeeUidsStream(event.id),
+      stream: _attendeeUidsStream,
       builder: (context, snapshot) {
         final uids = snapshot.data ?? [];
         final isAttending = currentUid != null && uids.contains(currentUid);
@@ -284,6 +286,7 @@ Future<void> _launchBookingUrl(BuildContext context) async {
               if (uids.isNotEmpty) ...[
                 const SizedBox(height: 14),
                 _AttendeePreview(
+                  key: ValueKey(uids.take(5).join(',')),
                   uids: uids,
                   currentUid: currentUid,
                   eventId: event.id,
@@ -429,9 +432,9 @@ Future<void> _launchBookingUrl(BuildContext context) async {
       width: double.infinity,
       height: 54,
       child: Container(
-        decoration: hasLink ? kPrimaryButtonDecoration : null,
+        decoration: hasLink ? kPrimaryButtonDecoration : null, 
         child: ElevatedButton.icon(
-          onPressed: hasLink ? () => _launchBookingUrl(context) : null,
+          onPressed: hasLink ? () => _launchBookingUrl(context) : null, //use ElevatedButton for onPressed which GestureDectector dont have
           icon: const Icon(Icons.confirmation_number_outlined, size: 18),
           label: Text(hasLink ? 'Buy Tickets' : 'Tickets — check at door'),
           style: ElevatedButton.styleFrom(
@@ -456,6 +459,7 @@ class _AttendeePreview extends StatefulWidget {
   final String eventName;
 
   const _AttendeePreview({
+    super.key,
     required this.uids,
     required this.currentUid,
     required this.eventId,
@@ -468,33 +472,13 @@ class _AttendeePreview extends StatefulWidget {
 
 class _AttendeePreviewState extends State<_AttendeePreview> {
   late Future<_AttendeeData> _dataFuture;
-  List<String>? _lastUids;
 
   @override
   void initState() {
     super.initState();
     _dataFuture = _fetchData();
-    _lastUids = List.from(widget.uids);
   }
 
-  @override
-  void didUpdateWidget(_AttendeePreview old) {
-    super.didUpdateWidget(old);
-    final previewUids = widget.uids.take(5).toList();
-    final oldPreviewUids = (_lastUids ?? []).take(5).toList();
-    if (!_listEquals(previewUids, oldPreviewUids)) {
-      _dataFuture = _fetchData();
-      _lastUids = List.from(widget.uids);
-    }
-  }
-
-  bool _listEquals(List<String> a, List<String> b) {
-    if (a.length != b.length) return false;
-    for (var i = 0; i < a.length; i++) {
-      if (a[i] != b[i]) return false;
-    }
-    return true;
-  }
 
   Future<_AttendeeData> _fetchData() async {
     final previewUids = widget.uids.take(5).toList();
@@ -502,15 +486,12 @@ class _AttendeePreviewState extends State<_AttendeePreview> {
 
     final friendSet = <String>{};
     if (widget.currentUid != null) {
-      final checks = await Future.wait(
-        users
-            .where((u) => u.uid != widget.currentUid)
-            .map((u) => FriendService().isFriend(widget.currentUid!, u.uid)),
+      final others = users.where((u) => u.uid != widget.currentUid).toList();
+      final checks = await Future.wait( //Future.wait takes a batch of Futures and run them concurrently
+        others.map((u) => FriendService().isFriend(widget.currentUid!, u.uid)),
       );
-      var i = 0;
-      for (final u in users.where((u) => u.uid != widget.currentUid)) {
-        if (checks[i]) friendSet.add(u.uid);
-        i++;
+      for (var i = 0; i < others.length; i++) {
+        if (checks[i]) friendSet.add(others[i].uid);
       }
     }
 
