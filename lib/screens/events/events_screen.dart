@@ -428,8 +428,8 @@ class _EventsScreenState extends State<EventsScreen> {
       );
     }
 
-    return StreamBuilder<List<Event>>(
-      stream: _searchStream,
+    return StreamBuilder<List<Event>>( 
+      stream: _searchStream, //when re-built, stream stays the same so theres no extra firestore read (costly)
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator(color: kAccent, strokeWidth: 2));
@@ -439,7 +439,7 @@ class _EventsScreenState extends State<EventsScreen> {
         }
 
         final all = snapshot.data ?? [];
-        final results = all.where((e) => _matches(e, _query)).toList();
+        final results = all.where((e) => _matches(e, _query)).toList(); //filter locally
 
         if (results.isEmpty) {
           return Center(

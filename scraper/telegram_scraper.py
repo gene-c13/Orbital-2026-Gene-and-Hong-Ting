@@ -124,6 +124,24 @@ def normalise_venue(venue_str):
     return v
 
 
+def score(data):
+    #counts how many fields in a firestore doc dict have non-empty values
+    return sum(1 for v in data.values() if v)
+
+
+def resolve_duplicate(db, doc_id, existing_snapshot, event):
+    #given an existing doc already identified as a duplicate of event, keeps
+    #whichever version has more filled-in fields
+    existing_data = existing_snapshot.to_dict() #converts firestore doc to python
+    existing_score = score(existing_data) #count how many fields in existing doc have non empty values
+    new_score = score(event) #same thing but for new event youre about to write
+    if new_score > existing_score:
+        db.collection('events').document(doc_id).set(event)
+        print(f"  Replaced duplicate with more complete version: {event['name']} — {doc_id}")
+    else:
+        print(f"  Skipped (existing has more info): {event['name']} — {doc_id} already exists") #if existing doc has equal or more filled fields, skip the write (keep existing doc)
+
+
 def write_event_to_firestore(db, event, source_channel):
     if not event.get('name') or not event.get('date'):
         return
@@ -155,24 +173,20 @@ def write_event_to_firestore(db, event, source_channel):
     #deduplication logic
     existing = db.collection('events').document(doc_id).get()
     if existing.exists:
-        existing_data = existing.to_dict() #converts firestore doc to python
-        existing_score = sum(1 for v in existing_data.values() if v) #count how many fields in existing doc have non empty values
-        new_score = sum(1 for v in event.values() if v) #same thing but for new event youre about to write
-        if existing_score > new_score:
-            print(f"  Skipped (existing has more info): {event['name']}")
-            return  #if existing doc has equal or more filled fields, skip the write (keep existing doc) and exit fxn
+        resolve_duplicate(db, doc_id, existing, event)
+        return
 
     # check if this venue already has an event with the SAME NAME on an adjacent date
     # (±1 day) — prevents duplicates when a repost makes Claude extract a slightly
     # different date for the same event, without wrongly skipping a genuinely
     # different event that just happens to land at the same venue the day before/after
     event_date = datetime.strptime(event['date'], '%Y-%m-%d')
-    for offset in [-1, 1]: #a for-loop over 2 item list, firsst iteration:-1, second: 1
+    for offset in [-1, 1]: #a for-loop over 2 item list, first iteration:date-1, second:date +1
         neighbour_date = (event_date + timedelta(days=offset)).strftime('%Y-%m-%d')
         neighbour_id = venue + '-' + neighbour_date
         neighbour = db.collection('events').document(neighbour_id).get()
         if neighbour.exists and neighbour.to_dict().get('name', '').strip().lower() == event['name'].strip().lower():
-            print(f"  Skipped (nearby duplicate): {event['name']} — {neighbour_id} already exists")
+            resolve_duplicate(db, neighbour_id, neighbour, event)
             return
 
     db.collection('events').document(doc_id).set(event)

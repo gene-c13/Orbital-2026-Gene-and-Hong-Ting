@@ -518,16 +518,22 @@ class _AttendeePreviewState extends State<_AttendeePreview> {
                   padding: const EdgeInsets.only(bottom: 10),
                   child: Row(
                     children: [
-                      TapToProfile(
-                        uid: user.uid,
-                        child: UserAvatar(photoUrl: user.photoUrl, displayName: user.name, radius: 16),
-                      ),
-                      const SizedBox(width: 10),
                       Expanded(
-                        child: Text(
-                          user.name,
-                          style: const TextStyle(color: Colors.white, fontSize: 14),
-                          overflow: TextOverflow.ellipsis,
+                        child: TapToProfile(
+                          uid: user.uid,
+                          child: Row(
+                            children: [
+                              UserAvatar(photoUrl: user.photoUrl, displayName: user.name, radius: 16),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  user.name,
+                                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       if (user.uid != widget.currentUid && data.friends.contains(user.uid))

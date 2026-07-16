@@ -36,7 +36,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool get _hasNumber     => _passwordController.text.contains(RegExp(r'[0-9]'));
   bool get _hasSpecial    => _passwordController.text.contains(RegExp(r'[!@#\$%^&*(),.?":{}|<>_\-]'));
   bool get _validUsername => RegExp(r'^[a-zA-Z0-9_]{3,20}$').hasMatch(_usernameController.text.trim());
-// => is a one-line function body, a => x means when a is called, return x
+
   int get _strength {
     final p = _passwordController.text;
     if (p.isEmpty) return 0;
