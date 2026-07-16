@@ -135,7 +135,8 @@ def write_event_to_firestore(db, event, source_channel):
         event['venue'] = 'Dashi Gogo'
 
     event['source'] = source_channel
-    event['crowd_level'] = 'Medium'
+    event['crowd_level'] = 'Low'
+    event['attendee_count'] = 0
     event['sort_order'] = 0
     event['image_url'] = ''
     event['booking_url'] = event.get('guestlist_url', '')

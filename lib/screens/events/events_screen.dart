@@ -287,24 +287,63 @@ class _EventsScreenState extends State<EventsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: Text(
-                    event.name,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 19,
-                      fontWeight: FontWeight.w800,
-                      height: 1.15,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        event.name,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 19,
+                          fontWeight: FontWeight.w800,
+                          height: 1.15,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Icons.location_on, color: kAccent, size: 14),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              event.venue,
+                              style: const TextStyle(color: kMuted, fontSize: 13, fontWeight: FontWeight.w500),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-                if (event.hasGuestlist) ...[
-                  const SizedBox(width: 8),
-                  _guestlistBadge(),
-                ],
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    if (event.hasGuestlist) ...[
+                      _guestlistBadge(),
+                      const SizedBox(height: 6),
+                    ],
+                    Text(
+                      event.price,
+                      style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.access_time, color: kAccent, size: 14),
+                        const SizedBox(width: 4),
+                        Text(
+                          event.time,
+                          style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ],
             ),
-            const SizedBox(height: 4),
-            Text(event.venue, style: const TextStyle(color: kMuted, fontSize: 13, fontWeight: FontWeight.w500)),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -317,12 +356,6 @@ class _EventsScreenState extends State<EventsScreen> {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                _dot(),
-                const Icon(Icons.access_time, color: kAccent, size: 14),
-                const SizedBox(width: 4),
-                Text(event.time, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
-                _dot(),
-                Text(event.price, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
               ],
             ),
             const SizedBox(height: 12),
@@ -336,7 +369,7 @@ class _EventsScreenState extends State<EventsScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                _crowdBadge(event.crowdLevel),
+                _crowdLevel(event.crowdLevel),
               ],
             ),
             _AttendanceSnippet(eventId: event.id),
@@ -346,47 +379,25 @@ class _EventsScreenState extends State<EventsScreen> {
     );
   }
 
-  Widget _dot() => const Padding(
-    padding: EdgeInsets.symmetric(horizontal: 6),
-    child: Text('·', style: TextStyle(color: kDim, fontSize: 14)),
-  );
-
   Widget _guestlistBadge() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-      decoration: BoxDecoration(
-        color: kAccent,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: const Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.bolt, color: Colors.white, size: 12),
-          SizedBox(width: 2),
-          Text('GL', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
-        ],
-      ),
+    return const Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.bolt, color: kAccent, size: 13),
+        SizedBox(width: 3),
+        Text('Guestlist', style: TextStyle(color: kAccent, fontSize: 12, fontWeight: FontWeight.w500)),
+      ],
     );
   }
 
-  Widget _crowdBadge(String level) {
+  Widget _crowdLevel(String level) {
     final Color color = crowdColor(level);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.6)),
-      ),
-      child: Text(
-        level.toUpperCase(),
-        style: TextStyle(
-          color: color,
-          fontSize: 10,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.6,
-        ),
-      ),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text('Crowd Level: ', style: TextStyle(color: kDim, fontSize: 13, fontWeight: FontWeight.w500)),
+        Text(level, style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w600)),
+      ],
     );
   }
 
