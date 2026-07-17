@@ -1,10 +1,10 @@
+import 'package:after_hours/widgets/tap_to_profile.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/services/auth_service.dart';
 import 'package:after_hours/services/post_service.dart';
 import 'package:after_hours/utils/time_format.dart';
-import 'package:after_hours/screens/social/other_user_profile_view.dart';
 import 'package:after_hours/services/user_service.dart';
 import 'package:after_hours/widgets/user_avatar.dart';
 
@@ -168,21 +168,15 @@ class _CommentsSheetState extends State<CommentsSheet> {
     final photoUrl = c['photo_url'] as String?;
     final ts = c['created_at'] as Timestamp?;
 
-    void openProfile() { //defining function that opens other user's profile
-      if (uid.isEmpty) return;
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => OtherUserProfileView(uid: uid)),
-      );
-    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          GestureDetector( //detects tap
-            onTap: openProfile,
-            child: UserAvatar(photoUrl: photoUrl, displayName: username, radius: 16),
+            TapToProfile(
+              uid:uid,
+              child: UserAvatar(photoUrl: photoUrl, displayName: username, radius: 16),
             ),
           const SizedBox(width: 10),
           Expanded(
@@ -191,8 +185,8 @@ class _CommentsSheetState extends State<CommentsSheet> {
               children: [
                 Row(
                   children: [
-                    GestureDetector(
-                      onTap: openProfile,
+                    TapToProfile(
+                      uid:uid,
                       child: Text(username,
                           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
                     ),
