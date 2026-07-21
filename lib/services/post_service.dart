@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import '../models/user.dart';
 
 class PostService {
   final _db = FirebaseFirestore.instance;
@@ -156,11 +157,15 @@ class PostService {
       'photo_url': photoUrl,
     });
 
+    // first post of a new month starts the monthly counters over instead of adding to them
+    final isNewMonth = userDoc.data()?['stats_month'] != AppUser.currentMonthKey;
+
     final Map<String, dynamic> updates = {
-      'events_this_month': FieldValue.increment(1),
+      'stats_month':       AppUser.currentMonthKey,
+      'events_this_month': isNewMonth ? 1 : FieldValue.increment(1),
+      'hours_this_month':  isNewMonth ? hoursOut : FieldValue.increment(hoursOut),
       'total_events':      FieldValue.increment(1),
     };
-    if (hoursOut > 0)       updates['hours_this_month'] = FieldValue.increment(hoursOut);
     if (puked)              updates['puke_count']        = FieldValue.increment(1);
     if (venue.isNotEmpty)   updates['clubs_visited']     = FieldValue.arrayUnion([venue]);
 

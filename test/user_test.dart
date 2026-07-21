@@ -31,6 +31,7 @@ void main() {
         'favourite_venue':  'Zouk',
         'favourite_genre':  'Techno',
         'clubs_visited':    ['Zouk', 'Cherry'],
+        'stats_month':      AppUser.currentMonthKey,
         'hours_this_month': 12,
         'events_this_month': 3,
         'total_events':     20,
@@ -55,6 +56,20 @@ void main() {
       expect(user.hoursThisMonth, 0);
       expect(user.pukeCount, 0);
       expect(user.isPublic, true); // accounts are public unless set otherwise
+    });
+
+    test('reads monthly stats as 0 when they belong to an older month', () {
+      final user = AppUser.fromFirestore({
+        'stats_month':       '2020-01',
+        'hours_this_month':  12,
+        'events_this_month': 3,
+        'total_events':      20,
+      }, 'u4');
+
+      // monthly counters reset, lifetime ones carry over
+      expect(user.hoursThisMonth, 0);
+      expect(user.eventsThisMonth, 0);
+      expect(user.totalEvents, 20);
     });
 
     test('keeps clubsVisited exactly as stored, duplicates and order included', () {

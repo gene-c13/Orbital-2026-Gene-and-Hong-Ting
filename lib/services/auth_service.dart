@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/user.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -28,6 +29,7 @@ class AuthService {
         if (snap.exists) throw Exception('username_taken');
         tx.set(_db.collection('users').doc(user.uid), {
           'username': username,
+          'stats_month':       AppUser.currentMonthKey,
           'hours_this_month':  0,
           'events_this_month': 0,
           'puke_count':        0,

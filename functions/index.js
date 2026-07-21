@@ -17,6 +17,7 @@ function crowdLevelForCount(count) {
   }
   return "Low";
 }
+exports.crowdLevelForCount = crowdLevelForCount;
 
 // Fires on both create and delete of an attendee doc, so joining and
 // leaving the guestlist both keep crowd_level accurate.
