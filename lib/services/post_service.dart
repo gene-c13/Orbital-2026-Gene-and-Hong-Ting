@@ -7,16 +7,12 @@ class PostService {
   final _db = FirebaseFirestore.instance;
 
   Stream<List<QueryDocumentSnapshot>> feedStream(String uid) {
-  final publicStream = _db
+  final visibleStream = _db
       .collection('posts')
-      .where('is_public', isEqualTo: true)
-      .orderBy('created_at', descending: true)
-      .limit(50)
-      .snapshots();
-
-  final ownStream = _db
-      .collection('posts')
-      .where('uid', isEqualTo: uid)
+      .where(Filter.or(
+        Filter('is_public', isEqualTo: true),
+        Filter('uid', isEqualTo: uid),
+      ))
       .orderBy('created_at', descending: true)
       .limit(50)
       .snapshots();
@@ -27,17 +23,13 @@ class PostService {
       .collection('friends')
       .snapshots();
 
-  QuerySnapshot? latestPublic;
-  QuerySnapshot? latestOwn;
+  List<QueryDocumentSnapshot> latestVisible = [];
   List<QueryDocumentSnapshot> latestFriendPosts = [];
 
   List<QueryDocumentSnapshot> merge() {
-    final publicDocs = latestPublic?.docs ?? [];
-    final ownDocs    = latestOwn?.docs    ?? [];
-
     final seen = <String>{};
     final merged = <QueryDocumentSnapshot>[];
-    for (final doc in [...publicDocs, ...ownDocs, ...latestFriendPosts]) {
+    for (final doc in [...latestVisible, ...latestFriendPosts]) {
       if (seen.add(doc.id)) merged.add(doc);
     }
     merged.sort((a, b) {
@@ -53,43 +45,45 @@ class PostService {
 
   final controller = StreamController<List<QueryDocumentSnapshot>>.broadcast();
 
-  final publicSub = publicStream.listen(
-    (snap) { latestPublic = snap; controller.add(merge()); },
-    onError: controller.addError,
-  );
-  final ownSub = ownStream.listen(
-    (snap) { latestOwn = snap; controller.add(merge()); },
+  void notify() => controller.add(merge()); //shared helper so every callback below doesn't repeat this line
+
+  final visibleSub = visibleStream.listen(
+    (snap) { latestVisible = snap.docs; notify(); }, //anon function
     onError: controller.addError,
   );
 
   // whenever the friends list changes, drop the old friends'-posts listener
   // and start a fresh one scoped to the current friend uids
-  StreamSubscription? friendPostsSub;
-  final friendsListSub = friendsListStream.listen((friendsSnap) {
-    friendPostsSub?.cancel();
+  StreamSubscription? friendPostsSub; //defining nullable variable
 
-    final friendUids = friendsSnap.docs.map((d) => d.id).take(30).toList();
+  void onFriendPostsSnapshot(QuerySnapshot snap) { //runs every time new post data arrive from Firestore
+    latestFriendPosts = snap.docs;
+    notify();
+  }
+
+  void onFriendsListChanged(QuerySnapshot friendsSnap) {
+    friendPostsSub?.cancel(); //cancel subscription if change in friendsListStream
+
+    final friendUids = friendsSnap.docs.map((d) => d.id).take(30).toList();  //update new friends list
     if (friendUids.isEmpty) {
       latestFriendPosts = [];
-      controller.add(merge());
-      return;
+      notify();
+      return; //return no new posts if no friends
     }
 
-    friendPostsSub = _db
+    friendPostsSub = _db //rebuild the query with updated friendsUid
         .collection('posts')
         .where('uid', whereIn: friendUids)
         .orderBy('created_at', descending: true)
         .limit(50)
         .snapshots()
-        .listen(
-          (snap) { latestFriendPosts = snap.docs; controller.add(merge()); },
-          onError: controller.addError,
-        );
-  });
+        .listen(onFriendPostsSnapshot, onError: controller.addError);
+  }
+
+  final friendsListSub = friendsListStream.listen(onFriendsListChanged, onError: controller.addError);
 
   controller.onCancel = () {
-    publicSub.cancel();
-    ownSub.cancel();
+    visibleSub.cancel();
     friendsListSub.cancel();
     friendPostsSub?.cancel();
     controller.close();
@@ -243,3 +237,4 @@ class PostService {
       });
 }
 }
+
