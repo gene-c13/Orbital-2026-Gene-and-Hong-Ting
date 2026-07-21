@@ -59,14 +59,13 @@ def get_driver():
 #driver is the selenium controlled chrome browser. 
 
 
-def get_event_links(driver):
-    driver.get("https://zoukgroup.com/singapore/events/") #driver is an object, thus it has .get method
-    time.sleep(5)
-
-    soup = BeautifulSoup(driver.page_source, "html.parser")
+def parse_event_links(html):
+    # Pulls every event link + venue out of the events list page HTML.
+    # Split out from get_event_links() so this half can be tested with a
+    # saved HTML sample instead of a live browser.
+    soup = BeautifulSoup(html, "html.parser")
 
     event_links = soup.find_all("a", href=re.compile(r"/event/"))
-    print(f"Event links found: {len(event_links)}")
 
     events = []
     seen = set()
@@ -101,27 +100,42 @@ def get_event_links(driver):
     return events
 
 
-def scrape_event_detail(driver, event_url):
-    driver.get(event_url)
-    time.sleep(12)
+def get_event_links(driver):
+    driver.get("https://zoukgroup.com/singapore/events/") #driver is an object, thus it has .get method
+    time.sleep(5)
 
-    soup = BeautifulSoup(driver.page_source, "html.parser")
+    events = parse_event_links(driver.page_source)
+    print(f"Event links found: {len(events)}")
+
+    return events
+
+
+def extract_date_from_url(event_url):
+    # Zouk's event URLs embed the date in an id like ".../EVE20260720/...".
+    # If there are extra digits before it, only the LAST 8 are used, so a
+    # prefixed id like "EVE99920260720" still resolves to 2026-07-20.
+    date_match = re.search(r"EVE(\d+)", event_url)
+    if not date_match:
+        return ""
+    raw_date = date_match.group(1)[-8:]
+    return f"{raw_date[:4]}-{raw_date[4:6]}-{raw_date[6:]}"
+
+
+def parse_event_page(html, event_url):
+    # Pulls every field out of an event detail page that DOESN'T need
+    # Claude - name, date, description, image, price. DJ extraction is
+    # kept separate (see scrape_event_detail below) since it calls the
+    # Claude API, which this function shouldn't need to do just to be
+    # tested against a saved HTML sample.
+    soup = BeautifulSoup(html, "html.parser")
 
     title_tag = soup.find("title")
     name = title_tag.text.split(" | ")[0].strip() if title_tag else "Unknown"
 
-    date_match = re.search(r"EVE(\d+)", event_url)
-    if date_match:
-        raw_date = date_match.group(1)[-8:]
-        date = f"{raw_date[:4]}-{raw_date[4:6]}-{raw_date[6:]}"
-    else:
-        date = ""
+    date = extract_date_from_url(event_url)
 
     desc_tag = soup.find("meta", {"name": "description"})
     description = desc_tag.get("content", "").strip() if desc_tag else ""
-    print(f"  Description: {description}")
-
-    dj = extract_dj_with_claude(description)
 
     img_tag = soup.find("meta", {"name": "twitter:image"})
     image_url = img_tag.get("content", "") if img_tag else ""
@@ -140,9 +154,19 @@ def scrape_event_detail(driver, event_url):
         "date": date,
         "description": description,
         "image_url": image_url,
-        "dj":dj,
         "price": price,
     }
+
+
+def scrape_event_detail(driver, event_url):
+    driver.get(event_url)
+    time.sleep(12)
+
+    detail = parse_event_page(driver.page_source, event_url)
+    print(f"  Description: {detail['description']}")
+
+    detail["dj"] = extract_dj_with_claude(detail["description"])
+    return detail
 
 
 def scrape_all_events():

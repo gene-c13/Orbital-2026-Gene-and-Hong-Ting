@@ -9,6 +9,7 @@ import 'package:after_hours/services/user_service.dart';
 import 'package:after_hours/screens/events/event_detail_screen.dart';
 import 'package:after_hours/widgets/navigation_helper.dart';
 import 'package:after_hours/widgets/user_avatar.dart';
+import 'package:after_hours/utils/event_search.dart';
 
 class EventsScreen extends StatefulWidget {
   const EventsScreen({super.key});
@@ -412,14 +413,6 @@ class _EventsScreenState extends State<EventsScreen> {
     );
   }
 
-  bool _matches(Event e, String q) {
-    final query = q.toLowerCase().trim();
-    return e.name.toLowerCase().contains(query)
-        || e.venue.toLowerCase().contains(query)
-        || e.dj.toLowerCase().contains(query)
-        || e.genres.any((g) => g.toLowerCase().contains(query));
-  }
-
   Widget _buildSearchResults() {
     if (_query.trim().isEmpty) {
       return Center(
@@ -450,7 +443,7 @@ class _EventsScreenState extends State<EventsScreen> {
         }
 
         final all = snapshot.data ?? [];
-        final results = all.where((e) => _matches(e, _query)).toList(); //filter locally
+        final results = all.where((e) => matches(e, _query)).toList(); //filter locally
 
         if (results.isEmpty) {
           return Center(

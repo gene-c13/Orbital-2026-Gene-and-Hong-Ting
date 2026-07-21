@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:after_hours/utils/hours.dart';
 
-double hoursOut(DateTime date, TimeOfDay start, TimeOfDay end) {
-  final base = DateTime(date.year, date.month, date.day);
-  var s = base.add(Duration(hours: start.hour, minutes: start.minute));
-  var e = base.add(Duration(hours: end.hour, minutes: end.minute));
-  if (e.isBefore(s)) e = e.add(const Duration(days: 1));
-  return e.difference(s).inMinutes / 60.0;
-}
+// hoursOut now lives in lib/utils/hours.dart and is imported here, so this
+// test actually guards the code create_post_screen.dart runs.
 
 void main() {
   final date = DateTime(2026, 6, 24);
@@ -24,6 +20,18 @@ void main() {
 
   test('zero duration returns zero', () {
     final result = hoursOut(date, const TimeOfDay(hour: 22, minute: 0), const TimeOfDay(hour: 22, minute: 0));
+    expect(result, 0.0);
+  });
+
+  test('ending exactly at midnight counts as crossing to the next day', () {
+    final result = hoursOut(date, const TimeOfDay(hour: 22, minute: 0), const TimeOfDay(hour: 0, minute: 0));
+    expect(result, 2.0);
+  });
+
+  test('a full 24-hour session', () {
+    final result = hoursOut(date, const TimeOfDay(hour: 12, minute: 0), const TimeOfDay(hour: 12, minute: 0));
+    // start == end, so isBefore is false and this reads as 0, not 24 -
+    // documenting the current behaviour rather than asserting it's ideal.
     expect(result, 0.0);
   });
 }

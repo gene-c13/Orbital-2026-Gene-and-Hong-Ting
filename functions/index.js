@@ -8,7 +8,7 @@ const db = getFirestore();
 // Ordered highest threshold first — first match wins.
 const CROWD_THRESHOLDS = [
   { min: 30, level: "High" },
-  { min: 10, level: "Medium" },
+  { min: 2, level: "Medium" },
 ];
 
 function crowdLevelForCount(count) {
@@ -17,6 +17,7 @@ function crowdLevelForCount(count) {
   }
   return "Low";
 }
+exports.crowdLevelForCount = crowdLevelForCount;
 
 // Fires on both create and delete of an attendee doc, so joining and
 // leaving the guestlist both keep crowd_level accurate.

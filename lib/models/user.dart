@@ -40,9 +40,18 @@ class AppUser {
   //user.name will show displayName else username
   String get name => displayName.isNotEmpty ? displayName : username;
 
+  // the month the monthly stats belong to, e.g. "2026-07"
+  // stored on the user doc so we know when the counters are stale
+  static String get currentMonthKey {
+    final now = DateTime.now();
+    return '${now.year}-${now.month.toString().padLeft(2, '0')}';
+  }
+
 //construct AppUser object from the dictionary
 // that Firestore returns via await firestore.collection("users").doc(id).get
   factory AppUser.fromFirestore(Map<String, dynamic> data, String uid) {
+    // counters from a previous month are stale, so read them as 0
+    final isCurrentMonth = data['stats_month'] == currentMonthKey;
     return AppUser(
       uid: uid,
       username: data['username'] ?? '',
@@ -51,8 +60,8 @@ class AppUser {
       favouriteVenue: data['favourite_venue'] ?? '',
       favouriteGenre: data['favourite_genre'] ?? '',
       clubsVisited: List<String>.from(data['clubs_visited'] ?? []),
-      hoursThisMonth: data['hours_this_month'] ?? 0,
-      eventsThisMonth: data['events_this_month'] ?? 0,
+      hoursThisMonth: isCurrentMonth ? data['hours_this_month'] ?? 0 : 0,
+      eventsThisMonth: isCurrentMonth ? data['events_this_month'] ?? 0 : 0,
       totalEvents: data['total_events'] ?? 0,
       pukeCount: data['puke_count'] ?? 0,
       isPublic: data['is_public'] as bool? ?? true,

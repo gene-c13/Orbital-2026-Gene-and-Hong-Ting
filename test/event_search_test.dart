@@ -1,15 +1,13 @@
-import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_test/flutter_test.dart' hide matches;
 import 'package:after_hours/models/event.dart';
+import 'package:after_hours/utils/event_search.dart';
 
-// Mirrors the private _matches() method in events_screen.dart, so this test
-// can call it directly without needing to build the whole screen.
-bool matches(Event e, String q) {
-  final query = q.toLowerCase().trim();
-  return e.name.toLowerCase().contains(query)
-      || e.venue.toLowerCase().contains(query)
-      || e.dj.toLowerCase().contains(query)
-      || e.genres.any((g) => g.toLowerCase().contains(query));
-}
+// matches() now lives in lib/utils/event_search.dart and is imported here,
+// so this test actually guards the code events_screen.dart runs.
+//
+// "hide matches" above: flutter_test already has its own matches() (a
+// regex matcher for expect()), which we don't use here. Hiding it keeps
+// our matches() from event_search.dart the only one Dart can see.
 
 Event _event({
   String name = 'Test Night',
@@ -62,5 +60,15 @@ void main() {
   test('empty query matches everything', () {
     final event = _event();
     expect(matches(event, ''), true);
+  });
+
+  test('a query of only spaces behaves like an empty query', () {
+    final event = _event();
+    expect(matches(event, '   '), true);
+  });
+
+  test('matches a partial word inside a genre', () {
+    final event = _event(genres: ['Deep House']);
+    expect(matches(event, 'hous'), true);
   });
 }
