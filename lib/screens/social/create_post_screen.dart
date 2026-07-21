@@ -594,7 +594,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   }
 }
 
-// Mobile-only image preview widget — avoids importing dart:io at the top level
 class _MobileImagePreview extends StatefulWidget {
   final String path;
   const _MobileImagePreview({required this.path});
