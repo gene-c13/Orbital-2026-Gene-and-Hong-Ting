@@ -10,6 +10,7 @@ import 'package:after_hours/services/post_service.dart';
 import 'package:after_hours/widgets/image_source_sheet.dart';
 import 'package:after_hours/widgets/primary_button.dart';
 import 'package:after_hours/utils/time_format.dart';
+import 'package:after_hours/utils/hours.dart';
 import 'package:after_hours/services/event_service.dart';
 import 'package:after_hours/widgets/venue_picker.dart';
 
@@ -56,11 +57,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
   double _hoursOut() {
     if (_startTime == null || _endTime == null) return 0;
-    final base  = DateTime(_date.year, _date.month, _date.day);
-    var start   = base.add(Duration(hours: _startTime!.hour, minutes: _startTime!.minute));
-    var end     = base.add(Duration(hours: _endTime!.hour,   minutes: _endTime!.minute));
-    if (end.isBefore(start)) end = end.add(const Duration(days: 1));
-    return end.difference(start).inMinutes / 60.0;
+    return hoursOut(_date, _startTime!, _endTime!);
   }
 
   Future<void> _pickDate() async {

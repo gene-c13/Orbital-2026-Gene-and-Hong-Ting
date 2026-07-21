@@ -1,25 +1,19 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:after_hours/utils/chat_id.dart';
 
 class ChatService {
   final _db = FirebaseFirestore.instance;
 
-  // Generates a consistent chat ID for two users regardless of who initiates.
-  // Sorting the UIDs means uid1_uid2 and uid2_uid1 always produce the same string.
-  String _chatId(String uid1, String uid2) {
-    final sorted = [uid1, uid2]..sort();
-    return '${sorted[0]}_${sorted[1]}';
-  }
-
   Future<String> getOrCreateChat(String currentUid, String otherUid) async {
-    final chatId = _chatId(currentUid, otherUid);
-    final ref = _db.collection('chats').doc(chatId);
+    final id = chatId(currentUid, otherUid);
+    final ref = _db.collection('chats').doc(id);
     // merge:true means two devices opening the same new chat simultaneously
     // both write the same doc without clobbering last_message or last_message_time
     await ref.set({
       'participants': [currentUid, otherUid],
       'created_at':  FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
-    return chatId; //screen uses chatID to load messages or send new ones
+    return id; //screen uses chatID to load messages or send new ones
   }
 
   Future<void> sendMessage(String chatId, String senderUid, String text) async {

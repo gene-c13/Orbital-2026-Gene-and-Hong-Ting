@@ -32,5 +32,20 @@ void main() {
       expect(event.crowdLevel, 'Low');
       expect(event.genres, isEmpty);
     });
+
+    test('falls back to an empty list when genres is the wrong type', () {
+      final event = Event.fromFirestore({'genres': 'House'}, 'doc3');
+      expect(event.genres, isEmpty);
+    });
+
+    test('falls back to TBC when price arrives as a number, not a string', () {
+      final event = Event.fromFirestore({'price': 20}, 'doc4');
+      expect(event.price, 'TBC');
+    });
+
+    test('falls back to Low when crowd_level arrives as a number', () {
+      final event = Event.fromFirestore({'crowd_level': 3}, 'doc5');
+      expect(event.crowdLevel, 'Low');
+    });
   });
 }

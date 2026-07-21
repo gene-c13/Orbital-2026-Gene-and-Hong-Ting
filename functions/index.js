@@ -8,7 +8,7 @@ const db = getFirestore();
 // Ordered highest threshold first — first match wins.
 const CROWD_THRESHOLDS = [
   { min: 30, level: "High" },
-  { min: 10, level: "Medium" },
+  { min: 2, level: "Medium" },
 ];
 
 function crowdLevelForCount(count) {

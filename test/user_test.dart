@@ -15,6 +15,11 @@ void main() {
       const user = AppUser(uid: 'u1', username: 'partyanimal', displayName: '');
       expect(user.name, 'partyanimal');
     });
+
+    test('is an empty string when both displayName and username are empty', () {
+      const user = AppUser(uid: 'u1', username: '', displayName: '');
+      expect(user.name, '');
+    });
   });
 
   group('AppUser.fromFirestore', () {
@@ -50,6 +55,16 @@ void main() {
       expect(user.hoursThisMonth, 0);
       expect(user.pukeCount, 0);
       expect(user.isPublic, true); // accounts are public unless set otherwise
+    });
+
+    test('keeps clubsVisited exactly as stored, duplicates and order included', () {
+      final user = AppUser.fromFirestore({
+        'clubs_visited': ['Zouk', 'Zouk', 'Cherry'],
+      }, 'u3');
+
+      // There's no de-duping logic in fromFirestore today, so this test
+      // documents the current behaviour rather than an intended safety net.
+      expect(user.clubsVisited, ['Zouk', 'Zouk', 'Cherry']);
     });
   });
 }
