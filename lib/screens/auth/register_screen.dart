@@ -136,17 +136,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 28),
 
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: const Color(0x14FFFFFF),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: const Color(0x44B14EFF)),
-                  boxShadow: const [
-                    BoxShadow(color: Color(0x559D4EDD), blurRadius: 40, spreadRadius: 2),
-                  ],
-                ),
-                child: Column(
+              Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _label('Username'),
@@ -230,7 +220,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ],
                 ),
-              ),
               const SizedBox(height: 32),
             ],
           ),

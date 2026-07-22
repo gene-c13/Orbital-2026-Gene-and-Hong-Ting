@@ -129,17 +129,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 style: TextStyle(fontSize: 13, color: Color(0xCCB14EFF), letterSpacing: 2),
               ),
               const SizedBox(height: 16),
-              Container( //this is the semi-transparent card that holds all the text boxes
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: const Color(0x14FFFFFF),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: const Color(0x44B14EFF)),
-                  boxShadow: const [
-                    BoxShadow(color: Color(0x559D4EDD), blurRadius: 40, spreadRadius: 2),
-                  ],
-                ),
-                child: Theme(
+              Theme(
                   data: Theme.of(context).copyWith(
                     textSelectionTheme: const TextSelectionThemeData(
                       selectionColor: Color(0x55B14EFF),
@@ -197,7 +187,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                   ),
                 ),
-              ),
                     ],
                   ),
             );
