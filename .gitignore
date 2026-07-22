@@ -1,18 +1,13 @@
-# Claude Code
-.claude/
-skills-lock.json
-skills.json
-CLAUDE.md
-AGENTS.md
-.impeccable
-.codex
-
 # Miscellaneous
 *.class
 *.log
 *.pyc
 *.swp
 .DS_Store
+node_modules/
+__pycache__/
+.pytest_cache/
+TEST_PLAN.md
 .atom/
 .build/
 .buildlog/
@@ -59,9 +54,7 @@ after_hours.session
 
 scraper/after_hours.session.firebase/
 
-scraper/.env 
+scraper/.env
 TASKS.md
 PRODUCT.md
 DESIGN.md
-CLAUDE.md
-.agents/skills
