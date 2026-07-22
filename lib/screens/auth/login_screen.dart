@@ -28,7 +28,7 @@ class _LoginScreenState extends State<LoginScreen> {
       final auth = AuthService();
       final user = await auth.signIn(
         email: emailController.text.trim(),
-        password: passwordController.text.trim(),
+        password: passwordController.text,
       );
       if (!mounted) return;
 
@@ -180,6 +180,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       PrimaryButton(
                         label: 'Sign In',
                         onPressed: _submitting ? null : _signIn,
+                        loading: _submitting,
                       ),
                       const SizedBox(height: 4),
                       Center(
