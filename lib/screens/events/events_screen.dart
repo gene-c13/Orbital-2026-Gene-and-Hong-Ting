@@ -318,30 +318,36 @@ class _EventsScreenState extends State<EventsScreen> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    if (event.hasGuestlist) ...[
-                      _guestlistBadge(),
-                      const SizedBox(height: 6),
-                    ],
-                    Text(
-                      event.price,
-                      style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.access_time, color: kAccent, size: 14),
-                        const SizedBox(width: 4),
-                        Text(
-                          event.time,
-                          style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
-                        ),
+                SizedBox(
+                  // fixed width so this block stays glued to the right edge,
+                  // long price text wraps within it instead of overflowing
+                  width: 130,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      if (event.hasGuestlist) ...[
+                        _guestlistBadge(),
+                        const SizedBox(height: 6),
                       ],
-                    ),
-                  ],
+                      Text(
+                        event.price,
+                        textAlign: TextAlign.end,
+                        style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.access_time, color: kAccent, size: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            event.time,
+                            style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

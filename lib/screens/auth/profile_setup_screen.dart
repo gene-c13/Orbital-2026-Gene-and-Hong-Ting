@@ -102,6 +102,14 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // fields section can grow taller than the screen (e.g. once the
+                // keyboard is up), so it scrolls instead of overflowing —
+                // Expanded gives it whatever height is left above the button
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                 const Text(
                   'Set up your\nprofile',
                   style: TextStyle(
@@ -208,8 +216,12 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                     ),
                   ),
                 ),
+                      ],
+                    ),
+                  ),
+                ),
 
-                const Spacer(),
+                const SizedBox(height: 20),
 
                 AnimatedOpacity(
                   duration: const Duration(milliseconds: 200),

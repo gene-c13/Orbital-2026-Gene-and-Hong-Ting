@@ -104,9 +104,13 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
+            child: SingleChildScrollView(
+              child: Column(
+                // min instead of the default max — a scroll view has no fixed
+                // height, so the column should only take as much space as its
+                // children actually need
+                mainAxisSize: MainAxisSize.min,
+                children: [
                 Container(
                   width: 80,
                   height: 80,
@@ -183,7 +187,8 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                     style: TextStyle(color: kDim, fontSize: 13),
                   ),
                 ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
