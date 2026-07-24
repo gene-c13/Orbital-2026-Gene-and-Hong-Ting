@@ -55,6 +55,14 @@ def delete_user(username):
     delete_subcollection(user_ref, 'friends')
     print("  friend list entries deleted")
 
+    # "going" markers live under events/{eventId}/attendees/{uid} — one doc per
+    # event this user RSVP'd to. The doc id is the uid, so we don't need to
+    # query for it, just try to delete it from every event. delete() on a doc
+    # that doesn't exist is a no-op, so this is safe to run for every event.
+    for event in db.collection('events').stream():
+        event.reference.collection('attendees').document(uid).delete()
+    print("  event attendance entries deleted")
+
     # the profile itself, and the username reservation
     user_ref.delete()
     username_ref.delete()
