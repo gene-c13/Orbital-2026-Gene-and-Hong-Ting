@@ -37,7 +37,7 @@ class Event {
       id:           documentId,
       name:         data['name']         ?? 'Unknown Event', //construct Event where name is data[name], if null:Unknown Event
       venue:        data['venue']        ?? 'Unknown Venue',
-      dj:           data['dj']           ?? 'Unknown DJ',
+      dj:           (data['dj'] == null || data['dj'] == '') ? 'Unknown DJ' : data['dj'], //?? alone only catches null, not empty string, which is what the scraper writes when no DJ is found
       time:         data['time']         ?? 'TBC',
       price:        data['price'] is String ? data['price'] : 'TBC',
       crowdLevel:   data['crowd_level'] is String ? data['crowd_level'] : 'Low',

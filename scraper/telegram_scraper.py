@@ -1,8 +1,10 @@
 import asyncio
 import json
+import re
+import requests
 from datetime import datetime, timezone, timedelta
 from telethon import TelegramClient
-from telethon.tl.types import MessageEntityTextUrl
+from telethon.tl.types import MessageEntityTextUrl, MessageEntityUrl
 import anthropic
 import firebase_admin
 from firebase_admin import credentials, firestore
@@ -44,18 +46,19 @@ Message:
 {message_text}
 
 If this message is a nightclub event announcement, extract the following fields and return as JSON.
+If the message advertises more than one night (e.g. multiple day tags like "SAT", "🔜 Fri", "🔜 Sun"), treat each night as a separate event and return a JSON array with one object per night — do not drop any of them.
 If it is NOT an event announcement (e.g. post-event thanks, random chat, ticket resale), return null.
 
-Fields to extract:
-- name: event name or night theme (string)
+Fields to extract for each night:
+- name: event name or night theme. If a night has no distinct name of its own, build one from what's next to its day tag (e.g. "Fri Ladies GL" -> name "Ladies GL"). If a "[Links in this message]" entry has a "form title", and the message text itself has no clearer name, use that form title instead. (string)
 - venue: club or venue name (string)
-- date: in YYYY-MM-DD format. This message was sent on {message_date}. Dates in messages are in DD.MM or DD.MM.YYYY format (e.g. "10.06" means June 10, not October 6). Use context clues like "tonight", "this Friday", "03.06" to determine the date. If no explicit date is mentioned, assume the event is on the same day the message was sent. (string)
+- date: in YYYY-MM-DD format. This message was sent on {message_date}. Dates in messages are in DD.MM or DD.MM.YYYY format (e.g. "10.06" means June 10, not October 6). Use context clues like "tonight", "this Friday", "03.06" to determine the date. A "🔜" or "coming soon" marker means that night is further out than the night(s) already mentioned earlier in the message — resolve it to the next occurrence of that weekday after the previous date, not before. If no explicit date is mentioned, assume the event is on the same day the message was sent. (string)
 - genres: list of music genres mentioned (list of strings)
 - time: doors open time e.g. "10:00 PM" (string or null)
 - price: entry/ticket price only, ignore bottle or sofa package prices (string or null)"
 - has_guestlist: true if guestlist is mentioned (boolean)
 - dj: DJ name(s) performing. Might follow "ft" (string or null)
-- guestlist_url: URL to guestlist form, or ticket form, if present. If the message includes a "[Hidden links in this message]" section, prefer a URL from there whose label suggests tickets, guestlist, RSVP, or sign up. (string or null)
+- guestlist_url: URL to guestlist form, or ticket form, if present. If the message includes a "[Links in this message]" section, prefer a URL from there whose label or form title suggests tickets, guestlist, RSVP, or sign up. (string or null)
 
 Return only valid JSON, no explanation. If not an event, return the word null."""
 
@@ -85,18 +88,44 @@ Return only valid JSON, no explanation. If not an event, return the word null.""
         return None
 
 
+def fetch_google_form_title(url):
+    # Google renders a form's title straight into the page's <title> tag on the
+    # server, so a plain HTTP GET sees it — no need to run any JavaScript. This
+    # gives Claude a real event name to work with instead of guessing one from
+    # vague message text like "tap here for GL".
+    try:
+        response = requests.get(url, timeout=5)
+        match = re.search(r'<title>([^<]*)</title>', response.text)
+        return match.group(1) if match else None
+    except requests.RequestException:
+        return None
+
+
 def enrich_with_hidden_links(message):
-    # Telegram lets someone hyperlink a word/phrase to a URL that never shows up in
-    # the plain text (e.g. "TAP HERE" linking to a Google Form behind the scenes).
-    # get_entities_text() pulls out (entity, display_text) pairs for us — it also
-    # handles Telegram's UTF-16 offset counting internally, which is easy to get
-    # wrong doing it by hand, so it's worth using instead of slicing the text ourselves.
-    hidden_links = message.get_entities_text(MessageEntityTextUrl)
-    if not hidden_links:
+    # Telegram carries links two ways: a word/phrase hyperlinked to a URL that never
+    # shows up in the plain text (e.g. "TAP HERE" linking to a Google Form behind the
+    # scenes), or the URL just pasted in as visible text. get_entities_text() pulls
+    # out (entity, display_text) pairs for either kind — it also handles Telegram's
+    # UTF-16 offset counting internally, which is easy to get wrong doing it by hand,
+    # so it's worth using instead of slicing the text ourselves.
+    links = message.get_entities_text(MessageEntityTextUrl) + message.get_entities_text(MessageEntityUrl)
+    if not links:
         return message.text
 
-    links_section = "\n".join(f'"{label}" links to: {entity.url}' for entity, label in hidden_links)
-    return f"{message.text}\n\n[Hidden links in this message]\n{links_section}"
+    lines = []
+    for entity, label in links:
+        # MessageEntityTextUrl carries a real url attribute (the link target differs
+        # from the visible label). MessageEntityUrl is just a plain URL Telegram
+        # auto-detected in the text, so the "label" it returns already is the url.
+        url = entity.url if isinstance(entity, MessageEntityTextUrl) else label
+        title = fetch_google_form_title(url) if 'forms.gle' in url or 'docs.google.com/forms' in url else None
+        if title:
+            lines.append(f'"{label}" links to: {url} (form title: "{title}")')
+        else:
+            lines.append(f'"{label}" links to: {url}')
+
+    links_section = "\n".join(lines)
+    return f"{message.text}\n\n[Links in this message]\n{links_section}"
 
 
 VENUE_KEYWORDS = ['yang', 'riverhouse', 'cherry', 'marquee', 'zouk', 'canvas', 'dashi']
