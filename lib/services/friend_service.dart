@@ -99,7 +99,7 @@ class FriendService {
   }
 
   Future<bool> hasPendingRequest(String fromUid, String toUid) async {
-    // check both A→B and B→A so the search screen shows "Sent" or hides "Add"
+    // check both A to B and B to A so the search screen shows "Sent" or hides "Add"
     // in both directions, since sendFriendRequest uses a deterministic doc ID
     final forward = await _db
         .collection('friend_requests')

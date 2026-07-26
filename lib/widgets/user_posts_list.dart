@@ -3,14 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:after_hours/services/post_service.dart';
 import 'package:after_hours/theme/app_theme.dart';
 
-/// Renders uid's posts, filtered to whatever viewerUid is allowed to see.
-/// Drop this at the bottom of a profile screen, under the stats.
-///
-/// It's a plain ListView with shrinkWrap + no scrolling of its own, because
-/// the profile screens already scroll the whole page via
-/// SingleChildScrollView. shrinkWrap makes it size to its content instead
-/// of trying to fill infinite height, and NeverScrollableScrollPhysics stops
-/// it from fighting the outer scroll view for gesture control.
+//shows a user's posts, filtered to what the viewer is allowed to see.
 class UserPostsList extends StatelessWidget {
   const UserPostsList({
     super.key,
@@ -25,7 +18,8 @@ class UserPostsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Column( //a Column and not a ListView because the profile screen already scrolls,
+//so this only needs to stack the cards and let the parent handle scrolling
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       const Padding(
@@ -61,11 +55,9 @@ class UserPostsList extends StatelessWidget {
           );
         }
 
-        return ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: docs.length,
-          itemBuilder: (context, index) => itemBuilder(context, docs[index]),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: docs.map((doc) => itemBuilder(context, doc)).toList(),
         );
       },
       )

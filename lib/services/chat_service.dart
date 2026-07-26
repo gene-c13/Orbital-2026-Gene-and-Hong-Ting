@@ -7,12 +7,11 @@ class ChatService {
   Future<String> getOrCreateChat(String currentUid, String otherUid) async {
     final id = chatId(currentUid, otherUid);
     final ref = _db.collection('chats').doc(id);
-    // merge:true means two devices opening the same new chat simultaneously
-    // both write the same doc without clobbering last_message or last_message_time
     await ref.set({
       'participants': [currentUid, otherUid],
       'created_at':  FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    }, SetOptions(merge: true));   // merge:true means two devices opening the same new chat simultaneously
+    // both write the same doc without clobbering last_message or last_message_time
     return id; //screen uses chatID to load messages or send new ones
   }
 

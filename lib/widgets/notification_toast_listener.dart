@@ -8,10 +8,8 @@ import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/widgets/navigation_helper.dart';
 import 'package:after_hours/screens/social/friend_requests_screen.dart';
 
-/// Wraps the whole app. Watches notificationsStream for whichever uid is
-/// currently signed in, and pops up a banner the instant something new
-/// shows up — a friend request or a message. Tapping the banner takes you
-/// straight to the relevant screen, same as tapping the row in the panel.
+//wraps the whole app, watches for new notifications on the signed in uid
+//and drops a banner at the top. tapping it opens the request or the chat
 class NotificationToastListener extends StatefulWidget {
   final Widget child;
   const NotificationToastListener({super.key, required this.child});
@@ -30,18 +28,15 @@ class _NotificationToastListenerState extends State<NotificationToastListener> {
   void initState() {
     super.initState();
     _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
-      // switching accounts (or signing out) resets what "known" means
+      //switching accounts or signing out wipes the old state so the next
+      //user doesn't inherit what the previous one had already seen
       _notifSub?.cancel();
       _knownIds = {};
       _isFirstLoad = true;
       if (user == null) return;
 
-      // the bell or panel may already be subscribed to this uid's shared
-      // stream and have consumed the real "already existed" snapshot before
-      // we get here — broadcast streams don't replay it to late joiners. If
-      // that already happened, grab their cached result as our baseline
-      // instead of waiting for the next Firestore event and mistaking a
-      // real new item for "stuff that was already there".
+      //bell or panel may have subscribed first and eaten the first snapshot,
+      //so use their cached copy as our baseline if there is one
       final cached = NotificationService().latestFor(user.uid);
       if (cached != null) {
         _knownIds = cached.map((i) => i.id).toSet();
@@ -52,23 +47,20 @@ class _NotificationToastListenerState extends State<NotificationToastListener> {
         final currentIds = items.map((i) => i.id).toSet();
 
         if (_isFirstLoad) {
-          // the very first emission is everything that already existed
-          // before you opened the app — not "new", so don't toast for it
+          //only show banners for stuff that arrives while the app is open
           _knownIds = currentIds;
           _isFirstLoad = false;
           return;
         }
 
-        // .toList() forces this to run right now, while _knownIds still
-        // holds the OLD set — without it, the check below would silently
-        // re-run later against the reassigned _knownIds (since a bare
-        // .where() re-checks its condition every time it's looped over)
-        // and find zero "new" items every time.
+        //.toList() runs the filter now, before the next line swaps _knownIds.
+        //without it .where() stays lazy and only checks when the loop reads it,
+        //by which point _knownIds is the new set and nothing looks new
         final newItems = items.where((i) => !_knownIds.contains(i.id)).toList();
         _knownIds = currentIds;
 
         for (final item in newItems) {
-          if (item.actorUid == user.uid) continue; // never toast your own actions
+          if (item.actorUid == user.uid) continue; //never toast your own actions
           _showToast(item);
         }
       });
@@ -84,10 +76,8 @@ class _NotificationToastListenerState extends State<NotificationToastListener> {
       NotificationType.message       => '$name: ${item.preview}',
     };
 
-    // insert straight into the app's Overlay instead of using a
-    // SnackBar/ScaffoldMessenger — the Overlay sits above every screen,
-    // dialog, and route in the app, so this shows up no matter what's
-    // currently on screen, always pinned to the top.
+    //using the Overlay instead of a SnackBar because it sits above every
+    //screen and dialog, so the banner shows no matter what's on screen
     final overlayState = navigatorKey.currentState?.overlay;
     if (overlayState == null) return;
 
@@ -105,9 +95,8 @@ class _NotificationToastListenerState extends State<NotificationToastListener> {
     overlayState.insert(entry);
   }
 
-  // Same destinations as tapping a row in the notifications panel — takes
-  // whatever the current route stack is and pushes the relevant screen
-  // on top, using the root navigator since a toast can appear over anything.
+  //same destinations as tapping a row in the notifications panel. uses the
+  //root navigator since a toast can show up over any screen
   void _openNotification(NotificationItem item, String name) {
     final context = navigatorKey.currentContext;
     if (context == null) return;
@@ -134,8 +123,8 @@ class _NotificationToastListenerState extends State<NotificationToastListener> {
   Widget build(BuildContext context) => widget.child;
 }
 
-// The visible banner itself. Slides down from above the screen, sits for
-// a few seconds, then slides back up and removes itself from the Overlay.
+//the banner itself. slides down from the top, waits 3 seconds, then slides
+//back up and removes itself
 class _ToastBanner extends StatefulWidget {
   final String text;
   final VoidCallback onDismiss;
@@ -173,8 +162,8 @@ class _ToastBannerState extends State<_ToastBanner> with SingleTickerProviderSta
 
   @override
   Widget build(BuildContext context) {
-    // Positioned works here without wrapping in a Stack ourselves —
-    // Overlay already renders every OverlayEntry inside its own Stack.
+    //Positioned, works without our own Stack because Overlay already puts
+    //every entry inside one (Positioned must be inside a Stack)
     return Positioned(
       top: 0,
       left: 0,
@@ -185,8 +174,7 @@ class _ToastBannerState extends State<_ToastBanner> with SingleTickerProviderSta
           child: Material(
             color: Colors.transparent,
             child: GestureDetector(
-              // tapping navigates straight away — no point animating the
-              // banner out first when a whole new screen is about to cover it
+              //no point animating the banner out when a new screen is about to cover it
               onTap: widget.onTap,
               child: Container(
                 margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

@@ -2,13 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/models/event.dart';
-import 'package:after_hours/models/user.dart';
 import 'package:after_hours/services/event_service.dart';
-import 'package:after_hours/services/attendance_service.dart';
-import 'package:after_hours/services/user_service.dart';
 import 'package:after_hours/screens/events/event_detail_screen.dart';
 import 'package:after_hours/widgets/navigation_helper.dart';
-import 'package:after_hours/widgets/user_avatar.dart';
+import 'package:after_hours/widgets/attendance_snippet.dart';
 import 'package:after_hours/utils/event_search.dart';
 
 class EventsScreen extends StatefulWidget {
@@ -27,11 +24,11 @@ class _EventsScreenState extends State<EventsScreen> {
   String _query = ''; //what has user typed so far
   final _searchController = TextEditingController();
 
-  // stream stored as a field so it's only created when the date actually changes,
-  // if its in build(), it will create new stream every rebuild (every keystroke, every setState)
+  //stream stored as a field so it's only created when the date actually changes,
+  //if its in build(), it will create new stream every rebuild (every keystroke, every setState)
   late Stream<List<Event>> _dayStream; //late cos not assigned yet, depenendent on EVentService instant initialised
 
-  // search results stream, made once here for the same reason
+  //search results stream, made once here for the same reason
   late Stream<List<Event>> _searchStream;
 
   @override
@@ -319,8 +316,8 @@ class _EventsScreenState extends State<EventsScreen> {
                 ),
                 const SizedBox(width: 12),
                 SizedBox(
-                  // fixed width so this block stays glued to the right edge,
-                  // long price text wraps within it instead of overflowing
+                  //fixed width so this block stays glued to the right edge,
+                  //long price text wraps within it instead of overflowing
                   width: 130,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
@@ -379,7 +376,7 @@ class _EventsScreenState extends State<EventsScreen> {
                 _crowdLevel(event.crowdLevel),
               ],
             ),
-            _AttendanceSnippet(eventId: event.id),
+            AttendanceSnippet(eventId: event.id),
           ],
         ),
       ),
@@ -510,130 +507,5 @@ class _EventsScreenState extends State<EventsScreen> {
         ),
       ),
     );
-  }
-}
-
-/// "John, Emma, and 3 others are going!" with up to 3 overlapping profile
-/// pictures — hidden entirely if no one's marked themselves attending yet.
-class _AttendanceSnippet extends StatefulWidget {
-  final String eventId;
-  const _AttendanceSnippet({required this.eventId});
-
-  @override
-  State<_AttendanceSnippet> createState() => _AttendanceSnippetState();
-}
-
-class _AttendanceSnippetState extends State<_AttendanceSnippet> {
-  // stream and future kept in state so scrolling the list doesn't keep
-  // re-subscribing and re-fetching the same profiles (same trick as
-  // _AttendeePreview in event_detail_screen.dart)
-  Stream<List<String>>? _uidsStream;
-  Future<List<AppUser>>? _usersFuture;
-  int _lastCount = -1; // how many attendees we last fetched profiles for
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.eventId.isNotEmpty) {
-      _uidsStream = AttendanceService().attendeeUidsStream(widget.eventId);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_uidsStream == null) return const SizedBox.shrink();
-
-    return StreamBuilder<List<String>>(
-      stream: _uidsStream,
-      builder: (context, snapshot) {
-        final uids = snapshot.data ?? [];
-        if (uids.isEmpty) return const SizedBox.shrink();
-
-        // only fetch profiles again when the attendee count changes,
-        // not every rebuild (same trick as _lastMessageCount in chat_screen)
-        if (uids.length != _lastCount) {
-          _lastCount = uids.length;
-          _usersFuture = UserService().getUsers(uids.take(3).toList());
-        }
-
-        return FutureBuilder<List<AppUser>>(
-          future: _usersFuture,
-          builder: (context, userSnap) {
-            final users = userSnap.data ?? [];
-            if (users.isEmpty) return const SizedBox.shrink();
-
-            final names = users.take(2).map((u) => u.name).toList();
-
-            return Padding(
-              padding: const EdgeInsets.only(top: 10),
-              child: Row(
-                children: [
-                  _avatarStack(users),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _attendanceText(names, uids.length),
-                      style: const TextStyle(color: kMuted, fontSize: 12, fontWeight: FontWeight.w600),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  /// Small overlapping circle-avatar cluster, up to 3 people, rightmost on
-  /// top, with a thin "cutout" ring matching the card background so the
-  /// overlap reads cleanly instead of avatars just butting up against
-  /// each other.
-  Widget _avatarStack(List<AppUser> users) {
-    const double size = 22;
-    const double overlap = 14;
-    final shown = users.take(3).toList();
-
-    return SizedBox(
-      width: overlap * (shown.length - 1) + size,
-      height: size,
-      child: Stack(
-        children: [
-          for (var i = 0; i < shown.length; i++)
-            Positioned(
-              left: i * overlap,
-              child: Container(
-                padding: const EdgeInsets.all(1.5),
-                decoration: const BoxDecoration(
-                  color: kSurface,
-                  shape: BoxShape.circle,
-                ),
-                child: UserAvatar(
-                  photoUrl: shown[i].photoUrl,
-                  displayName: shown[i].name,
-                  radius: size / 2 - 1.5,
-                  fontSize: 9,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  String _attendanceText(List<String> names, int total) {
-    final others = total - names.length;
-    final othersLabel = others == 1 ? 'other' : 'others';
-
-    if (names.length == 1) {
-      return others > 0
-          ? '${names[0]} and $others $othersLabel are going!'
-          : '${names[0]} is going!';
-    }
-
-    return others > 0
-        ? '${names[0]}, ${names[1]}, and $others $othersLabel are going!'
-        : '${names[0]} and ${names[1]} are going!';
   }
 }

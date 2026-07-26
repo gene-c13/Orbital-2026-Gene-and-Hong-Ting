@@ -53,7 +53,7 @@ class PostService {
     onError: controller.addError,
   );
 
-  // whenever the friends list changes, drop the old friends'-posts listener
+  // whenever the friends list changes, drop the old friends'posts listener
   // and start a fresh one scoped to the current friend uids
   StreamSubscription? friendPostsSub; //defining nullable variable
 
@@ -224,8 +224,10 @@ class PostService {
 }) {
   final base = _db.collection('posts').where('uid', isEqualTo: profileUid);
 
+  //capped at 50 so a heavy poster doesn't pull hundreds of docs and start
+  //hundreds of image downloads the moment their profile opens
   if (viewerUid == profileUid) {
-    return base.orderBy('created_at', descending: true).snapshots().map((s) => s.docs);
+    return base.orderBy('created_at', descending: true).limit(50).snapshots().map((s) => s.docs);
   }
 
   // watch the friendship doc itself, so the query swaps live if it changes
@@ -236,8 +238,8 @@ class PostService {
       .asyncExpand((friendDoc) {
         final isFriend = friendDoc.exists;
         final query = isFriend
-            ? base.orderBy('created_at', descending: true)
-            : base.where('is_public', isEqualTo: true).orderBy('created_at', descending: true);
+            ? base.orderBy('created_at', descending: true).limit(50)
+            : base.where('is_public', isEqualTo: true).orderBy('created_at', descending: true).limit(50);
         return query.snapshots().map((s) => s.docs);
       });
 }

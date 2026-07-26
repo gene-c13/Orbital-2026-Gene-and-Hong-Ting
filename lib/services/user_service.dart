@@ -5,23 +5,22 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:after_hours/models/user.dart';
 import 'package:after_hours/services/post_service.dart';
 
-/// Centralises reads and writes of the `users` collection so screens work
-/// with typed [AppUser] objects instead of raw Firestore maps (same role
-/// EventService plays for `events`).
+//all reads and writes to the users collection live here so screens get
+//AppUser objects instead of raw firestore maps. same idea as EventService
 class UserService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   CollectionReference get _usersCollection => _firestore.collection('users');
 
-  /// Fetches a single user once. Returns null if the doc doesn't exist.
+  //grabs one user once, null if the doc doesn't exist
   Future<AppUser?> getUser(String uid) async {
     final doc = await _usersCollection.doc(uid).get();
     if (!doc.exists) return null;
     return AppUser.fromFirestore(doc.data() as Map<String, dynamic>, doc.id);
   }
 
-  /// Live updates for a single user — e.g. a profile screen that should
-  /// reflect edits (like a new avatar) without needing a manual refresh.
+  //live version of getUser, so a profile screen updates itself when
+  //something like the avatar changes
   Stream<AppUser?> userStream(String uid) {
     return _usersCollection.doc(uid).snapshots().map((doc) {
       if (!doc.exists) return null;
@@ -29,8 +28,7 @@ class UserService {
     });
   }
 
-  /// Fetches multiple users by uid — for attendee lists, friend lists,
-  /// chat participant lists, etc.
+  //fetch a bunch of users at once, used for attendee and friend lists
   Future<List<AppUser>> getUsers(List<String> uids) async {
     if (uids.isEmpty) return [];
 
@@ -43,7 +41,6 @@ class UserService {
   }
 
   Future<List<AppUser>> searchByUsernamePrefix(String query) async {
-    // upper bound  is the highest private-use unicode char, so usernames starting with query fall within the range
     final snap = await _usersCollection
         .where('username', isGreaterThanOrEqualTo: query)
         .where('username', isLessThanOrEqualTo: '$query')
@@ -60,10 +57,8 @@ class UserService {
     return ref.getDownloadURL();
   }
 
-  /// Saves profile-edit changes in one place: display name (both Firebase
-  /// Auth and Firestore), favourite venue/genre, the public/private toggle,
-  /// and — if the user picked a new one — their avatar. Called from
-  /// EditProfileSheet's save button.
+  //saves everything the edit profile sheet can change in one go, including
+  //the display name which has to go to both auth and firestore
   Future<void> updateProfile({
     required String uid,
     required String displayName,
@@ -73,8 +68,8 @@ class UserService {
     required String bio,
     Uint8List? avatarBytes,
   }) async {
-    // upload avatar first — it's the most likely step to fail, and doing it
-    // before the Auth/Firestore writes means we never end up with a half-saved profile
+    //upload the avatar first since it's the step most likely to fail, that
+    //way we don't end up with a half saved profile
     String? photoUrl;
     if (avatarBytes != null) {
       photoUrl = await _uploadAvatar(uid, avatarBytes);

@@ -2,12 +2,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:after_hours/theme/app_theme.dart';
 
-/// Circular avatar that shows [photoUrl] when it's set, otherwise falls back
-/// to the first letter of [displayName].
-///
-/// Shared so profile screens, friend lists, and (soon) event-card attendee
-/// badges all render a user's picture the same way instead of each screen
-/// re-implementing the photo-or-initial fallback logic.
+//round profile picture, falls back to the first letter of the name when
+//theres no photo. shared so every screen shows avatars the same way
 class UserAvatar extends StatelessWidget {
   final String? photoUrl;
   final String displayName;
