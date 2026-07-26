@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// Wraps the `events/{eventId}/attendees` subcollection — one doc per user
+/// wraps the `events/{eventId}/attendees` subcollection: one doc per user
 /// who's marked themselves as going to that event, keyed by uid.
 class AttendanceService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;

@@ -102,19 +102,16 @@ def fetch_google_form_title(url):
 
 
 def enrich_with_hidden_links(message):
-    # Telegram carries links two ways: a word/phrase hyperlinked to a URL that never
-    # shows up in the plain text (e.g. "TAP HERE" linking to a Google Form behind the
-    # scenes), or the URL just pasted in as visible text. get_entities_text() pulls
-    # out (entity, display_text) pairs for either kind — it also handles Telegram's
-    # UTF-16 offset counting internally, which is easy to get wrong doing it by hand,
-    # so it's worth using instead of slicing the text ourselves.
+    # telegram carries links two ways: a word hyperlinked to a URL 
+    # or the URL just pasted in as visible text. get_entities_text() is a telethon method , pulls
+    # out (entity, display_text) pairs for either kind. 
     links = message.get_entities_text(MessageEntityTextUrl) + message.get_entities_text(MessageEntityUrl)
     if not links:
         return message.text
 
     lines = []
     for entity, label in links:
-        # MessageEntityTextUrl carries a real url attribute (the link target differs
+        # MessageEntityTextUrl carries a real url (the link differs
         # from the visible label). MessageEntityUrl is just a plain URL Telegram
         # auto-detected in the text, so the "label" it returns already is the url.
         url = entity.url if isinstance(entity, MessageEntityTextUrl) else label
@@ -188,9 +185,9 @@ def write_event_to_firestore(db, event, source_channel):
     event['image_url'] = ''
     event['booking_url'] = event.get('guestlist_url', '')
 
-    # .get(key, default) only falls back when the key is missing — Claude sometimes
-    # returns "venue": null explicitly, which .get() would happily pass through as
-    # None instead of catching it, so `or` is used here to fall through on that too
+    # .get(key, default) only falls back when the key is missing. Claude sometimes
+    # returns "venue": null explicitly, which .get() would pass through as
+    # None instead of catching it, so `or` is used here as backup
     venue_raw = event.get('venue') or event.get('name') or 'unknown'
     venue_norm = normalise_venue(venue_raw)
     if venue_norm == 'zouk' :
@@ -207,7 +204,7 @@ def write_event_to_firestore(db, event, source_channel):
         return
 
     # check if this venue already has an event with the SAME NAME on an adjacent date
-    # (±1 day) — prevents duplicates when a repost makes Claude extract a slightly
+    # (±1 day) prevents duplicates when a repost makes Claude extract a slightly
     # different date for the same event, without wrongly skipping a genuinely
     # different event that just happens to land at the same venue the day before/after
     event_date = datetime.strptime(event['date'], '%Y-%m-%d')
