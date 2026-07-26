@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:after_hours/theme/app_theme.dart';
 
-/// Bottom sheet listing [kGenres] with a check on the current pick.
-/// Shared by profile setup and edit profile so the sheet only lives in
-/// one place — [onPicked] runs with the tapped genre before the sheet closes.
+//bottom sheet listing the genres with a tick on the current one. kept here
+//so profile setup and edit profile share it instead of both building one
 void showGenrePicker(BuildContext context, String? selected, void Function(String) onPicked) {
   showModalBottomSheet(
     context: context,

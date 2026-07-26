@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:after_hours/theme/app_theme.dart';
 
-/// Bottom sheet asking camera or gallery. Shared by edit profile and
-/// create post — returns the chosen [ImageSource], or null if dismissed.
+//bottom sheet asking camera or gallery, shared by edit profile and create
+//post. gives back the choice, or null if they tapped away
 Future<ImageSource?> showImageSourceSheet(BuildContext context, String title) {
   return showModalBottomSheet<ImageSource>(
     context: context,

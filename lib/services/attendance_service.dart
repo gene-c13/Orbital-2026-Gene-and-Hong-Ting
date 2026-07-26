@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// wraps the `events/{eventId}/attendees` subcollection: one doc per user
-/// who's marked themselves as going to that event, keyed by uid.
+//wraps the events/{eventId}/attendees subcollection, one doc per user
+//who's going to that event, keyed by uid
 class AttendanceService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -18,9 +18,8 @@ class AttendanceService {
     return _attendeesCollection(eventId).doc(uid).delete();
   }
 
-  /// Live list of attendee uids for an event. Used both to render "who's
-  /// going" and, by checking whether it contains the current uid, to know
-  /// if the current user has already marked themselves attending.
+  //live list of attendee uids. used to show who's going, and checking if it
+  //contains the current uid tells us whether they've already marked going
   Stream<List<String>> attendeeUidsStream(String eventId) {
     return _attendeesCollection(eventId)
         .snapshots()

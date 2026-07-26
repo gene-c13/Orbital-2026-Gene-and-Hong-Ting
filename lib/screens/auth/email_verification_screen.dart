@@ -106,7 +106,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
             padding: const EdgeInsets.all(32),
             child: SingleChildScrollView(
               child: Column(
-                // min instead of the default max — a scroll view has no fixed
+                // min instead of the default max: a scroll view has no fixed
                 // height, so the column should only take as much space as its
                 // children actually need
                 mainAxisSize: MainAxisSize.min,

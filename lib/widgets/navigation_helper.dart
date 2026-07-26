@@ -23,10 +23,7 @@ void goToTab(BuildContext context, int targetIndex) {
     screen = const EventsScreen();
   }
 
-  // Clear the whole stack and push the new tab — no stacking.
-  // Each tab is wrapped in _AuthGuard so remote session revocation
-  // (account deleted, token revoked) still redirects to login even
-  // though the auth gate in main.dart was removed from the tree.
+  // Clear the whole stack and push the new tab: no stacking.
   Navigator.of(context).pushAndRemoveUntil(
     MaterialPageRoute(builder: (_) => _AuthGuard(child: screen)),
     (route) => false,

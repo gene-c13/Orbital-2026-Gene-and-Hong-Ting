@@ -13,7 +13,7 @@ import 'package:after_hours/widgets/tap_to_profile.dart';
 class ChatListScreen extends StatelessWidget { //stateless because the streambuilder handles its own live updates internally
   const ChatListScreen({super.key}); //identify the widget so it can track it across rebuilds
 
-  // the participant in a chat doc that isn't me — used both when collecting
+  // the participant in a chat doc that isn't me: used both when collecting
   // uids for the batch fetch and when building each row
   String _otherUid(Map<String, dynamic> chatData, String currentUid) {
     final participants = List<String>.from(chatData['participants'] ?? []);

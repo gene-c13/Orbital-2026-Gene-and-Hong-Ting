@@ -25,7 +25,7 @@ class AfterHoursApp extends StatelessWidget {
   Widget build(BuildContext context) {
     // NotificationToastListener wraps the whole MaterialApp, not just
     // home:, because goToTab() calls pushAndRemoveUntil with a predicate
-    // that always returns false — that wipes every route in the Navigator,
+    // that always returns false: that wipes every route in the Navigator,
     // including whatever home: originally built. Only widgets sitting
     // ABOVE MaterialApp (outside the Navigator entirely) survive that.
     return NotificationToastListener(

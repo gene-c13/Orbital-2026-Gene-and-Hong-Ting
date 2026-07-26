@@ -22,7 +22,7 @@ def cleanup_orphaned_attendees():
             checked += 1
             uid = attendee.id
 
-            # attendee doc id is the uid — if there's no matching user
+            # attendee doc id is the uid: if there's no matching user
             # profile left, this is a ghost left over from a deleted account
             user_doc = db.collection('users').document(uid).get()
             if not user_doc.exists:

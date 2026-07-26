@@ -90,7 +90,7 @@ Return only valid JSON, no explanation. If not an event, return the word null.""
 
 def fetch_google_form_title(url):
     # Google renders a form's title straight into the page's <title> tag on the
-    # server, so a plain HTTP GET sees it — no need to run any JavaScript. This
+    # server, so a plain HTTP GET sees it: no need to run any JavaScript. This
     # gives Claude a real event name to work with instead of guessing one from
     # vague message text like "tap here for GL".
     try:

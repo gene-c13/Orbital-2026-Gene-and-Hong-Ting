@@ -5,7 +5,7 @@ const { getFirestore } = require("firebase-admin/firestore");
 initializeApp();
 const db = getFirestore();
 
-// Ordered highest threshold first — first match wins.
+// Ordered highest threshold first: first match wins.
 const CROWD_THRESHOLDS = [
   { min: 30, level: "High" },
   { min: 2, level: "Medium" },
@@ -30,7 +30,7 @@ exports.updateCrowdLevel = onDocumentWritten(
       .doc(eventId)
       .collection("attendees");
 
-    // Aggregation count query — always matches the true subcollection size,
+    // Aggregation count query: always matches the true subcollection size,
     // never drifts like an incrementing counter could.
     const snapshot = await attendeesRef.count().get();
     const attendeeCount = snapshot.data().count;

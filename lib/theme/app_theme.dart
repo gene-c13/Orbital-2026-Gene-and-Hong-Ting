@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 // happens to be on top right now.
 final scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
-// Gives access to the app's single Overlay from outside the widget tree —
+// Gives access to the app's single Overlay from outside the widget tree,
 // used to insert the top-of-screen notification banner on top of whatever
 // screen or dialog is currently showing, regardless of which one that is.
 final navigatorKey = GlobalKey<NavigatorState>();

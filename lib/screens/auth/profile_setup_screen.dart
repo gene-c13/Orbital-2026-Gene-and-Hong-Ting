@@ -103,7 +103,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // fields section can grow taller than the screen (e.g. once the
-                // keyboard is up), so it scrolls instead of overflowing —
+                // keyboard is up), so it scrolls instead of overflowing,
                 // Expanded gives it whatever height is left above the button
                 Expanded(
                   child: SingleChildScrollView(

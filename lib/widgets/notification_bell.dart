@@ -8,8 +8,8 @@ import 'package:after_hours/services/user_service.dart';
 import 'package:after_hours/theme/app_theme.dart';
 import 'package:after_hours/widgets/notifications_panel.dart';
 
-/// The bell icon shown in the social screen's header. Shows a small red
-/// dot whenever there's a notification newer than notifications_seen_at.
+//bell icon in the social screen header. shows a small dot when theres a
+//notification newer than notifications_seen_at
 class NotificationBell extends StatelessWidget {
   const NotificationBell({super.key});
 
@@ -30,9 +30,9 @@ class NotificationBell extends StatelessWidget {
 
         return StreamBuilder<List<NotificationItem>>(
           stream: NotificationService().notificationsStream(uid),
-          // the stream is shared/cached — if this bell subscribes after
+          // the stream is shared/cached, if this bell subscribes after
           // some other widget already started it, it won't see past
-          // events on its own, so seed it with whatever's already known
+          // events on its own, so start it with whatever's already known
           initialData: NotificationService().latestFor(uid),
           builder: (context, notifSnap) {
             final items = notifSnap.data ?? [];

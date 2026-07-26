@@ -10,7 +10,7 @@ def init_firestore():
 
 
 def delete_subcollection(doc_ref, subcollection_name):
-    # deleting a document does NOT delete its subcollections — each doc inside
+    # deleting a document does NOT delete its subcollections: each doc inside
     # has to be deleted one by one
     for doc in doc_ref.collection(subcollection_name).stream():
         doc.reference.delete()
@@ -47,7 +47,7 @@ def delete_user(username):
         chat.reference.delete()
     print("  chats deleted")
 
-    # friendship is stored on both sides — remove this user from each friend's
+    # friendship is stored on both sides: remove this user from each friend's
     # list too, then delete their own friends subcollection
     user_ref = db.collection('users').document(uid)
     for friend in user_ref.collection('friends').stream():
@@ -55,7 +55,7 @@ def delete_user(username):
     delete_subcollection(user_ref, 'friends')
     print("  friend list entries deleted")
 
-    # "going" markers live under events/{eventId}/attendees/{uid} — one doc per
+    # "going" markers live under events/{eventId}/attendees/{uid}: one doc per
     # event this user RSVP'd to. The doc id is the uid, so we don't need to
     # query for it, just try to delete it from every event. delete() on a doc
     # that doesn't exist is a no-op, so this is safe to run for every event.
@@ -68,7 +68,7 @@ def delete_user(username):
     username_ref.delete()
     print("  user profile + username reservation deleted")
 
-    # the actual sign-in account — wrapped in try/except since it may already be
+    # the actual sign-in account: wrapped in try/except since it may already be
     # gone if you deleted it from Firebase Auth before running this script
     try:
         auth.delete_user(uid)

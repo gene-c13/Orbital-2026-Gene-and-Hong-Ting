@@ -20,7 +20,7 @@ class _NotificationsPanelState extends State<NotificationsPanel> {
   @override
   void initState() {
     super.initState();
-    // opening the panel counts as "seen" — clears the bell's dot next time
+    // opening the panel counts as "seen":  clears the bell's dot next time
     final uid = AuthService().currentUid;
     if (uid != null) NotificationService().markSeen(uid);
   }
@@ -52,7 +52,7 @@ class _NotificationsPanelState extends State<NotificationsPanel> {
             Flexible(
               child: StreamBuilder<List<NotificationItem>>(
                 stream: NotificationService().notificationsStream(uid),
-                // same reasoning as the bell — seed with the shared
+                // same reasoning as the bell: start with the shared
                 // stream's current value instead of waiting for the next
                 // Firestore change to arrive
                 initialData: NotificationService().latestFor(uid),
@@ -73,7 +73,7 @@ class _NotificationsPanelState extends State<NotificationsPanel> {
                   }
 
                   // friend_request and message items only carry a uid, not a
-                  // name — batch-fetch every actor once, same pattern as
+                  // name: batch-fetch every actor once, same pattern as
                   // FriendRequestsScreen, instead of one read per row.
                   final uidsNeedingLookup = items
                       .map((i) => i.actorUid)
