@@ -115,25 +115,30 @@ class ChatListScreen extends StatelessWidget { //stateless because the streambui
                             return Container(
                               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                               decoration: kCardDecoration,
-                              child:ListTile(
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-                              leading: TapToProfile(
-                                uid: otherUid,
-                                child: UserAvatar(displayName: other.name, photoUrl: other.photoUrl, radius: 24),
+                              child: Material(
+                                color: Colors.transparent,
+                                borderRadius: BorderRadius.circular(16),
+                                clipBehavior: Clip.antiAlias,
+                                child: ListTile(
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                                  leading: TapToProfile(
+                                    uid: otherUid,
+                                    child: UserAvatar(displayName: other.name, photoUrl: other.photoUrl, radius: 24),
+                                  ),
+                                  title: Text(
+                                    other.name,
+                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                                  ),
+                                  subtitle: Text(
+                                    preview,
+                                    style: const TextStyle(color: kDim, fontSize: 13),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  onTap: () => openChat(context, other.uid, other.username),
+                                ),
                               ),
-                              title: Text(
-                                other.name,
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
-                              ),
-                              subtitle: Text(
-                                preview,
-                                style: const TextStyle(color: kDim, fontSize: 13),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              onTap: () => openChat(context, other.uid, other.username),
-                            )
-                          );  
+                            );
                           },
                         );
                       },

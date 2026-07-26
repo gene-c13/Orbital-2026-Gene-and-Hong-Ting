@@ -397,16 +397,9 @@ Future<void> _launchBookingUrl(BuildContext context) async {
         const SizedBox(height: 10),
         Row(
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: color),
-              ),
-              child: Text(
-                level.toUpperCase(),
-                style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5),
-              ),
+            Text(
+              level.toUpperCase(),
+              style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5),
             ),
             const SizedBox(width: 10),
             Expanded(

@@ -198,26 +198,11 @@ class _PostCardState extends State<PostCard> {
     );
   }
 
-  Widget _pukeBadge() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: kBorder),
-      ),
-      child: const Text('🤮', style: TextStyle(fontSize: 13)),
-    );
-  }
+  Widget _pukeBadge() => const Text('🤮', style: TextStyle(fontSize: 13));
 
   Widget _ratingBadge(double rating) {
-    return Container(
-      margin: const EdgeInsets.only(left: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: kAccent.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: kAccent.withValues(alpha: 0.5)),
-      ),
+    return Padding(
+      padding: const EdgeInsets.only(left: 8),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -233,20 +218,13 @@ class _PostCardState extends State<PostCard> {
   }
 
   Widget _tag(IconData icon, String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: kAccent.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: kAccent, size: 12),
-          const SizedBox(width: 5),
-          Text(label, style: const TextStyle(color: kMuted, fontSize: 12, fontWeight: FontWeight.w600)),
-        ],
-      ),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: kAccent, size: 12),
+        const SizedBox(width: 5),
+        Text(label, style: const TextStyle(color: kMuted, fontSize: 12, fontWeight: FontWeight.w600)),
+      ],
     );
   }
 }
