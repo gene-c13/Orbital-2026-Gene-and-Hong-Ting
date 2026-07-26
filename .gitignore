@@ -48,13 +48,28 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# secrets and credentials
 serviceAccountKey.json
-
-after_hours.session
-
-scraper/after_hours.session.firebase/
-
+.env
 scraper/.env
+lib/scraper/.env
+
+# telegram session files
+after_hours.session
+scraper/after_hours.session
+
+# firebase local cache
+.firebase/
+
+# internal working docs, not part of the submission
 TASKS.md
 PRODUCT.md
 DESIGN.md
+TEST_PLAN.md
+HANDOFF.md
+CODE_REVIEW.md
+code_review_round2.md
+code_authenticity_report.md
+bug_report.md
+scraper/SCRAPING_LEARNINGS.md
+scraper/SCRAPING_WRITEUP.md
