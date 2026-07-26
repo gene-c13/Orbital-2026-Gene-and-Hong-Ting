@@ -30,7 +30,7 @@ Future<ImageSource?> showImageSourceSheet(BuildContext context, String title) {
           ListTile(
             leading: const Icon(Icons.photo_library_outlined, color: kAccent),
             title: const Text('Choose from gallery', style: TextStyle(color: Colors.white)),
-            onTap: () => Navigator.of(ctx).pop(ImageSource.gallery),
+            onTap: () => Navigator.of(ctx).pop(ImageSource.gallery), //ImageSource is built into flutter
           ),
           const SizedBox(height: 8),
         ],
